@@ -1,8 +1,8 @@
 ```mermaid
 classDiagram
-    direction TB
-
-    %% --- PATRÓN OBSERVER (Sincronización GUI/Lógica) ---
+    %% ==========================================
+    %% PATRÓN OBSERVER (Interfaces Base)
+    %% ==========================================
     class Observador {
         <<interface>>
         +actualizar() void
@@ -11,10 +11,13 @@ classDiagram
     class SujetoObservable {
         <<interface>>
         +agregarObservador(o: Observador) void
+        +removerObservador(o: Observador) void
         +notificarObservadores() void
     }
 
-    %% --- MODELO (Bastián) ---
+    %% ==========================================
+    %% MODELO (Lógica, Datos y Singleton)
+    %% ==========================================
     class GestorDatos {
         <<Singleton>>
         -GestorDatos instancia$
@@ -24,6 +27,7 @@ classDiagram
         -List~Observador~ observadores
         -GestorDatos()
         +getInstancia() GestorDatos$
+        +registrarTutor(t: Tutor) void
         +guardarReserva(r: Reserva) void
         +eliminarReserva(r: Reserva) void
         +notificarObservadores() void
@@ -33,25 +37,58 @@ classDiagram
         -String nombre
         -String materia
         -String afinidad
-        +getNombre() String
         +getDisponibilidad() List~String~
+        +getNombre() String
+    }
+    
+    class Estudiante {
+        -String nombre
+        -String afinidad
+        +getNombre() String
     }
 
-    %% --- PATRÓN STRATEGY (Bastián) ---
+    class Reserva {
+        -Tutor tutor
+        -Estudiante estudiante
+        -String horario
+        -String estado
+        +getEstado() String
+    }
+
+    SujetoObservable <|.. GestorDatos
+    GestorDatos o-- Tutor
+    GestorDatos o-- Estudiante
+    GestorDatos o-- Reserva
+
+    %% ==========================================
+    %% PATRÓN STRATEGY (Algoritmos)
+    %% ==========================================
     class EstrategiaBusqueda {
         <<interface>>
-        +buscar(tutores: List~Tutor~, filtro: String) List~Tutor~
+        +buscar(tutores: List~Tutor~, parametros: Object) List~Tutor~
     }
     
     class BusquedaPorHorario {
-        +buscar() List~Tutor~
+        +buscar(tutores: List~Tutor~, parametros: Object) List~Tutor~
     }
     
     class BusquedaPorAfinidad {
-        +buscar() List~Tutor~
+        +buscar(tutores: List~Tutor~, parametros: Object) List~Tutor~
     }
 
-    %% --- PATRÓN COMMAND (María José) ---
+    class BuscadorDeTutores {
+        -EstrategiaBusqueda estrategiaActual
+        +setEstrategia(e: EstrategiaBusqueda) void
+        +ejecutarBusqueda(tutores: List~Tutor~) List~Tutor~
+    }
+
+    EstrategiaBusqueda <|.. BusquedaPorHorario
+    EstrategiaBusqueda <|.. BusquedaPorAfinidad
+    BuscadorDeTutores o-- EstrategiaBusqueda
+
+    %% ==========================================
+    %% CONTROLADOR & PATRÓN COMMAND
+    %% ==========================================
     class Comando {
         <<interface>>
         +ejecutar() void
@@ -71,31 +108,32 @@ classDiagram
         +deshacerUltimaAccion() void
     }
 
-    %% --- PATRÓN PROXY & VISTA (Tomás) ---
+    Comando <|.. ComandoCrearReserva
+    HistorialOperaciones o-- Comando
+    ComandoCrearReserva --> GestorDatos : "modifica"
+
+    %% ==========================================
+    %% VISTA & PATRÓN PROXY
+    %% ==========================================
     class PerfilSeleccionable {
         <<interface>>
         +getNombre() String
+        +getDisponibilidad() List~String~
     }
 
     class ProxyTutor {
         -Tutor tutorRealActual
         +cambiarTutorEnFoco(t: Tutor) void
         +getNombre() String
+        +getDisponibilidad() List~String~
     }
 
     class PanelCalendario {
         -ProxyTutor proxy
         +actualizar() void
+        +renderizarCasillas() void
     }
 
-    %% --- RELACIONES ---
-    SujetoObservable <|.. GestorDatos
-    GestorDatos o-- Tutor
-    EstrategiaBusqueda <|.. BusquedaPorHorario
-    EstrategiaBusqueda <|.. BusquedaPorAfinidad
-    Comando <|.. ComandoCrearReserva
-    HistorialOperaciones o-- Comando
-    ComandoCrearReserva --> GestorDatos : "modifica"
     PerfilSeleccionable <|.. Tutor
     PerfilSeleccionable <|.. ProxyTutor
     ProxyTutor o-- Tutor : "representa"
