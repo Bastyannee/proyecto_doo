@@ -1,143 +1,188 @@
 ```mermaid
 classDiagram
+    direction TB
+
     %% ==========================================
-    %% PATRÓN OBSERVER (Interfaces Base)
+    %% PAQUETE: modelo.entidades
     %% ==========================================
-    class Observador {
-        <<interface>>
-        +actualizar() void
+    namespace modelo_entidades {
+        class ConstantesHorario {
+            <<utility>>
+            +int DIAS$
+            +int BLOQUES$
+            +String[] NOMBRES_DIAS$
+            +String[] NOMBRES_BLOQUES$
+        }
+
+        class Estudiante {
+            -String id
+            -String nombre
+            -String carrera
+            -int semestre
+            -String correo
+            -String comentario
+            -String fotoPath
+            +getId() String
+            +getNombre() String
+        }
+
+        class Tutor {
+            -String id
+            -String nombre
+            -String descripcion
+            -String materia
+            -String afinidad
+            -String fotoPath
+            -boolean[][] disponibilidad
+            -int maxEstudiantes
+            -double tarifa
+            +isDisponible(dia: int, bloque: int) boolean
+            +setDisponibilidadBloque(dia: int, bloque: int, estado: boolean) void
+        }
+
+        class Solicitud {
+            -String id
+            -String asunto
+            -String comentario
+            -boolean[][] horarioDeseado
+            -EstadoSolicitud estado
+            -LocalDateTime fechaCreacion
+            +isBloqueSolicitado(dia: int, bloque: int) boolean
+            +setEstado(estado: EstadoSolicitud) void
+        }
+
+        class Reserva {
+            -String id
+            -LocalDate fecha
+            -int diaIndex
+            -int bloqueIndex
+            -EstadoReserva estado
+            +conflictaCon(otra: Reserva) boolean
+            +isActiva() boolean
+        }
+    }
+
+    %% ==========================================
+    %% PAQUETE: modelo
+    %% ==========================================
+    namespace modelo {
+        class GestorDatos {
+            <<Singleton>>
+            -GestorDatos instancia$
+            -GestorDatos()
+            +getInstancia() GestorDatos$
+            +guardarReserva(r: Reserva) void
+            +eliminarReserva(r: Reserva) void
+            +archivarSolicitud(s: Solicitud) void
+        }
+    }
+
+    %% ==========================================
+    %% PAQUETE: modelo.estrategias
+    %% ==========================================
+    namespace modelo_estrategias {
+        class EstrategiaBusqueda {
+            <<interface>>
+            +buscar(tutores: List~Tutor~, solicitud: Solicitud) List~Tutor~
+        }
+        class BusquedaHorario {
+            +buscar(tutores: List~Tutor~, solicitud: Solicitud) List~Tutor~
+        }
+        class BusquedaAfinidad {
+            +buscar(tutores: List~Tutor~, solicitud: Solicitud) List~Tutor~
+        }
+    }
+
+    %% ==========================================
+    %% PAQUETE: controlador.comandos
+    %% ==========================================
+    namespace controlador_comandos {
+        class Comando {
+            <<interface>>
+            +ejecutar() void
+            +deshacer() void
+        }
+        class ComandoAgendar {
+            -Solicitud solicitudOrigen
+            -GestorDatos receptor
+            +ejecutar() void
+            +deshacer() void
+        }
+        class ComandoArchivar {
+            -Solicitud solicitud
+            -GestorDatos receptor
+            +ejecutar() void
+            +deshacer() void
+        }
+        class GestorComandos {
+            -Stack~Comando~ historial
+            +procesarComando(c: Comando) void
+            +deshacerUltimaAccion() void
+        }
+    }
+
+    %% ==========================================
+    %% PAQUETES: vista y vista.paneles
+    %% ==========================================
+    namespace vista {
+        class VentanaPrincipal {
+            +inicializar() void
+        }
+        class Navegador {
+            +mostrarPanel(nombre: String) void
+        }
     }
     
-    class SujetoObservable {
-        <<interface>>
-        +agregarObservador(o: Observador) void
-        +removerObservador(o: Observador) void
-        +notificarObservadores() void
+    namespace vista_paneles {
+        class PanelBienvenida {
+            +refrescarLista() void
+        }
+        class PanelBusqueda {
+            +mostrarResultados(tutores: List~Tutor~) void
+        }
+        class PanelConfirmacion {
+            +mostrarExito() void
+        }
+        class PanelDetalleSoli {
+            +cargarDatosSolicitud(s: Solicitud) void
+        }
     }
 
     %% ==========================================
-    %% MODELO (Lógica, Datos y Singleton)
+    %% RELACIONES UML (Estructurales y Comportamiento)
     %% ==========================================
-    class GestorDatos {
-        <<Singleton>>
-        -GestorDatos instancia$
-        -List~Tutor~ tutores
-        -List~Estudiante~ estudiantes
-        -List~Reserva~ reservas
-        -List~Observador~ observadores
-        -GestorDatos()
-        +getInstancia() GestorDatos$
-        +registrarTutor(t: Tutor) void
-        +guardarReserva(r: Reserva) void
-        +eliminarReserva(r: Reserva) void
-        +notificarObservadores() void
-    }
-
-    class Tutor {
-        -String nombre
-        -String materia
-        -String afinidad
-        +getDisponibilidad() List~String~
-        +getNombre() String
-    }
     
-    class Estudiante {
-        -String nombre
-        -String afinidad
-        +getNombre() String
-    }
+    %% Relaciones de Entidades
+    Reserva "*" --> "1" Tutor : asignado a
+    Reserva "*" --> "1" Estudiante : pertenece a
+    Reserva "*" --> "1" Solicitud : originada por
+    Solicitud "*" --> "1" Estudiante : creada por
 
-    class Reserva {
-        -Tutor tutor
-        -Estudiante estudiante
-        -String horario
-        -String estado
-        +getEstado() String
-    }
+    %% Relaciones de Agregación del Singleton
+    GestorDatos "1" o-- "*" Tutor : contiene
+    GestorDatos "1" o-- "*" Estudiante : contiene
+    GestorDatos "1" o-- "*" Solicitud : gestiona
+    GestorDatos "1" o-- "*" Reserva : almacena
 
-    SujetoObservable <|.. GestorDatos
-    GestorDatos o-- Tutor
-    GestorDatos o-- Estudiante
-    GestorDatos o-- Reserva
-
-    %% ==========================================
-    %% PATRÓN STRATEGY (Algoritmos)
-    %% ==========================================
-    class EstrategiaBusqueda {
-        <<interface>>
-        +buscar(tutores: List~Tutor~, parametros: Object) List~Tutor~
-    }
+    %% Implementación Patrón Strategy
+    EstrategiaBusqueda <|.. BusquedaHorario : implementa
+    EstrategiaBusqueda <|.. BusquedaAfinidad : implementa
     
-    class BusquedaPorHorario {
-        +buscar(tutores: List~Tutor~, parametros: Object) List~Tutor~
-    }
+    %% Implementación Patrón Command
+    Comando <|.. ComandoAgendar : implementa
+    Comando <|.. ComandoArchivar : implementa
+    GestorComandos "1" o-- "*" Comando : apila
     
-    class BusquedaPorAfinidad {
-        +buscar(tutores: List~Tutor~, parametros: Object) List~Tutor~
-    }
+    %% Dependencias de Controladores hacia Modelo
+    ComandoAgendar --> GestorDatos : modifica
+    ComandoArchivar --> GestorDatos : modifica
+    ComandoAgendar --> Solicitud : transforma
+    ComandoArchivar --> Solicitud : archiva
 
-    class BuscadorDeTutores {
-        -EstrategiaBusqueda estrategiaActual
-        +setEstrategia(e: EstrategiaBusqueda) void
-        +ejecutarBusqueda(tutores: List~Tutor~) List~Tutor~
-    }
-
-    EstrategiaBusqueda <|.. BusquedaPorHorario
-    EstrategiaBusqueda <|.. BusquedaPorAfinidad
-    BuscadorDeTutores o-- EstrategiaBusqueda
-
-    %% ==========================================
-    %% CONTROLADOR & PATRÓN COMMAND
-    %% ==========================================
-    class Comando {
-        <<interface>>
-        +ejecutar() void
-        +deshacer() void
-    }
-
-    class ComandoCrearReserva {
-        -Reserva reserva
-        -GestorDatos receptor
-        +ejecutar() void
-        +deshacer() void
-    }
-
-    class HistorialOperaciones {
-        -Stack~Comando~ comandosEjecutados
-        +procesarComando(c: Comando) void
-        +deshacerUltimaAccion() void
-    }
-
-    Comando <|.. ComandoCrearReserva
-    HistorialOperaciones o-- Comando
-    ComandoCrearReserva --> GestorDatos : "modifica"
-
-    %% ==========================================
-    %% VISTA & PATRÓN PROXY
-    %% ==========================================
-    class PerfilSeleccionable {
-        <<interface>>
-        +getNombre() String
-        +getDisponibilidad() List~String~
-    }
-
-    class ProxyTutor {
-        -Tutor tutorRealActual
-        +cambiarTutorEnFoco(t: Tutor) void
-        +getNombre() String
-        +getDisponibilidad() List~String~
-    }
-
-    class PanelCalendario {
-        -ProxyTutor proxy
-        +actualizar() void
-        +renderizarCasillas() void
-    }
-
-    PerfilSeleccionable <|.. Tutor
-    PerfilSeleccionable <|.. ProxyTutor
-    ProxyTutor o-- Tutor : "representa"
-    Observador <|.. PanelCalendario
-    GestorDatos --> Observador : "notifica"
-    PanelCalendario --> ProxyTutor : "consulta"
+    %% Relaciones de Composición en la Vista
+    VentanaPrincipal *-- Navegador : contiene
+    Navegador --> PanelBienvenida : renderiza
+    Navegador --> PanelBusqueda : renderiza
+    Navegador --> PanelConfirmacion : renderiza
+    Navegador --> PanelDetalleSoli : renderiza
 ```
