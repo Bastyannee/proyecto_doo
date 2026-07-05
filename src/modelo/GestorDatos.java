@@ -1,9 +1,6 @@
 package modelo;
 
-import modelo.entidades.Estudiante;
-import modelo.entidades.Reserva;
-import modelo.entidades.Solicitud;
-import modelo.entidades.Tutor;
+import modelo.entidades.*;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
