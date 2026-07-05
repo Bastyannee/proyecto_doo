@@ -1,120 +1,145 @@
 package vista.paneles;
 
 import controlador.eventos.Observador;
+import modelo.entidades.ConstantesHorario;
+import vista.Navegador;
 import vista.proxy.PerfilSeleccionable;
 import vista.proxy.ProxyTutor;
 
-import javax.swing.JPanel;
+import javax.swing.JButton;
 import javax.swing.JLabel;
-import javax.swing.BoxLayout;
+import javax.swing.JPanel;
+import javax.swing.SwingConstants;
+import javax.swing.border.LineBorder;
+import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Font;
+import java.awt.GridLayout;
 
 /**
- * Panel visual que muestra el calendario de disponibilidad
- * del tutor actualmente seleccionado.
- *
+ * Panel que muestra la disponibilidad del tutor seleccionado.
+
  * PATRÓN OBSERVER:
- * Implementa Observador y se registra en ProxyTutor al crearse.
- * Cuando el admin selecciona un tutor distinto en PanelDirectorio,
- * ProxyTutor llama automáticamente a actualizar() en este panel,
- * que refresca su contenido y ejecuta repaint() — sin que nadie
- * tenga que llamarlo manualmente.
- *
- * NOTA PARA MARI:
- * La estructura del Observer ya esta completa. Para mejorar
- * este panel con mas componentes Swing (tabla de horarios,
- * botones de reserva, etc.), agregar los componentes en
- * inicializarComponentes() y actualizar sus valores en actualizar().
+ * Implementa Observador y se registra en ProxyTutor al construirse.
+ * Cuando el admin selecciona un tutor en PanelBusqueda, ProxyTutor
+ * llama a actualizar() aquí y la grilla se redibuja automáticamente.
+
+ * PATRÓN PROXY:
+ * Trabaja con PerfilSeleccionable, nunca con Tutor directamente.
+ * No sabe si habla con el objeto real o con el ProxyTutor.
  */
 public class PanelCalendario extends JPanel implements Observador {
 
-    // Nombres de dias y bloques para mostrar en la UI
-    private static final String[] DIAS = {
+    private static final String[] NOMBRES_DIAS = {
             "Lunes", "Martes", "Miércoles", "Jueves", "Viernes"
     };
-    private static final String[] BLOQUES = {
-            "08:00-09:00", "09:00-10:00", "10:00-11:00", "11:00-12:00",
-            "14:00-15:00", "15:00-16:00", "16:00-17:00", "17:00-18:00"
+    private static final String[] NOMBRES_BLOQUES = {
+            "08:00-09:30", "09:30-11:00", "11:00-12:30",
+            "12:30-14:00", "14:00-15:30", "15:30-17:00"
     };
 
-    // Componentes Swing
-    private JLabel labelNombre;
-    private JLabel labelMateria;
-    private JLabel labelTarifa;
-    private JLabel labelDisponibilidad;
+    private static final Color COLOR_DISPONIBLE    = new Color(144, 238, 144);
+    private static final Color COLOR_NO_DISPONIBLE = new Color(220, 220, 220);
+    private static final Color COLOR_ENCABEZADO    = new Color(70, 130, 180);
 
-    /**
-     * Crea el panel e inmediatamente se registra como observador
-     * en ProxyTutor para recibir actualizaciones automaticas.
-     */
-    public PanelCalendario() {
-        inicializarComponentes();
-        // Auto-registro: a partir de aqui, cada vez que el admin
-        // seleccione un tutor, ProxyTutor llamara a actualizar()
+    private final Navegador navegador;
+    private final JLabel    labelNombreTutor;
+    private final JLabel    labelMateria;
+    private final JLabel    labelTarifa;
+    private final JPanel    grillaDias;
+    private final JLabel[][] celdas;
+
+    public PanelCalendario(Navegador navegador) {
+        this.navegador        = navegador;
+        this.labelNombreTutor = new JLabel("Sin tutor seleccionado", SwingConstants.CENTER);
+        this.labelMateria     = new JLabel("", SwingConstants.CENTER);
+        this.labelTarifa      = new JLabel("", SwingConstants.CENTER);
+        this.celdas           = new JLabel[ConstantesHorario.DIAS][ConstantesHorario.BLOQUES];
+        this.grillaDias       = construirGrilla();
+
+        construirUI();
+
+        // AUTO-REGISTRO: ProxyTutor llamará a actualizar() cada vez
+        // que el tutor seleccionado cambie en PanelBusqueda.
         ProxyTutor.getInstancia().registrarObservador(this);
     }
 
     /**
-     * Inicializa y organiza los componentes visuales del panel.
-     */
-    private void inicializarComponentes() {
-        setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-
-        labelNombre = new JLabel("Sin tutor seleccionado");
-        labelNombre.setFont(new Font("Arial", Font.BOLD, 16));
-
-        labelMateria          = new JLabel("Materia: -");
-        labelTarifa           = new JLabel("Tarifa: -");
-        labelDisponibilidad   = new JLabel("Disponibilidad: -");
-
-        add(labelNombre);
-        add(labelMateria);
-        add(labelTarifa);
-        add(labelDisponibilidad);
-    }
-
-    /**
-     * Llamado automaticamente por ProxyTutor cuando el tutor
-     * seleccionado cambia. Actualiza todos los componentes del panel.
-     *
-     * @param perfil el tutor activo via PerfilSeleccionable
+     * Llamado automáticamente por ProxyTutor cuando el tutor cambia.
+     * Actualiza encabezado y toda la grilla de disponibilidad.
      */
     @Override
     public void actualizar(PerfilSeleccionable perfil) {
-        labelNombre.setText(perfil.getNombre());
+        labelNombreTutor.setText(perfil.getNombre());
         labelMateria.setText("Materia: " + perfil.getMateria());
-        labelTarifa.setText("Tarifa: $" + perfil.getTarifa() + "/hora");
-        labelDisponibilidad.setText(construirResumenDisponibilidad(perfil));
+        labelTarifa.setText("Tarifa: $" + String.format("%.0f", perfil.getTarifa()) + "/hora");
+
+        for (int dia = 0; dia < ConstantesHorario.DIAS; dia++) {
+            for (int bloque = 0; bloque < ConstantesHorario.BLOQUES; bloque++) {
+                boolean disponible = perfil.isDisponible(dia, bloque);
+                celdas[dia][bloque].setBackground(
+                        disponible ? COLOR_DISPONIBLE : COLOR_NO_DISPONIBLE);
+                celdas[dia][bloque].setText(disponible ? "✓" : "");
+            }
+        }
+
         repaint();
         revalidate();
     }
 
-    /**
-     * Construye un texto resumen de la disponibilidad del tutor.
-     * Mari puedes reemplazar esto por una tabla visual más elaborada.
-     *
-     * @param perfil el tutor a consultar
-     * @return texto con los bloques disponibles
-     */
-    private String construirResumenDisponibilidad(PerfilSeleccionable perfil) {
-        StringBuilder sb = new StringBuilder("<html>Disponibilidad:<br>");
-        for (int dia = 0; dia < DIAS.length; dia++) {
-            StringBuilder bloquesDia = new StringBuilder();
-            for (int bloque = 0; bloque < BLOQUES.length; bloque++) {
-                if (perfil.isDisponible(dia, bloque)) {
-                    if (bloquesDia.length() > 0) bloquesDia.append(", ");
-                    bloquesDia.append(BLOQUES[bloque]);
-                }
-            }
-            if (bloquesDia.length() > 0) {
-                sb.append("&nbsp;&nbsp;")
-                        .append(DIAS[dia])
-                        .append(": ")
-                        .append(bloquesDia)
-                        .append("<br>");
+    private void construirUI() {
+        setLayout(new BorderLayout(5, 5));
+
+        JPanel panelEncabezado = new JPanel(new GridLayout(3, 1));
+        labelNombreTutor.setFont(new Font("Arial", Font.BOLD, 20));
+        panelEncabezado.add(labelNombreTutor);
+        panelEncabezado.add(labelMateria);
+        panelEncabezado.add(labelTarifa);
+
+        JButton btnVolver = new JButton("Volver a búsqueda");
+        btnVolver.addActionListener(e -> navegador.mostrarBusqueda());
+
+        JPanel panelBotones = new JPanel();
+        panelBotones.add(btnVolver);
+
+        add(panelEncabezado, BorderLayout.NORTH);
+        add(grillaDias,      BorderLayout.CENTER);
+        add(panelBotones,    BorderLayout.SOUTH);
+    }
+
+    private JPanel construirGrilla() {
+        JPanel grilla = new JPanel(new GridLayout(
+                ConstantesHorario.BLOQUES + 1,
+                ConstantesHorario.DIAS   + 1,
+                2, 2));
+
+        grilla.add(crearEncabezado(""));
+        for (String dia : NOMBRES_DIAS) {
+            grilla.add(crearEncabezado(dia));
+        }
+
+        for (int bloque = 0; bloque < ConstantesHorario.BLOQUES; bloque++) {
+            grilla.add(crearEncabezado(NOMBRES_BLOQUES[bloque]));
+            for (int dia = 0; dia < ConstantesHorario.DIAS; dia++) {
+                JLabel celda = new JLabel("", SwingConstants.CENTER);
+                celda.setOpaque(true);
+                celda.setBackground(COLOR_NO_DISPONIBLE);
+                celda.setBorder(new LineBorder(Color.WHITE, 1));
+                celdas[dia][bloque] = celda;
+                grilla.add(celda);
             }
         }
-        sb.append("</html>");
-        return sb.toString();
+
+        return grilla;
+    }
+
+    private JLabel crearEncabezado(String texto) {
+        JLabel label = new JLabel(texto, SwingConstants.CENTER);
+        label.setOpaque(true);
+        label.setBackground(COLOR_ENCABEZADO);
+        label.setForeground(Color.WHITE);
+        label.setFont(new Font("Arial", Font.BOLD, 11));
+        label.setBorder(new LineBorder(Color.WHITE, 1));
+        return label;
     }
 }
