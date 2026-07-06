@@ -1,3 +1,9 @@
+package controlador.comandos;
+import modelo.entidades.Reserva;
+import modelo.entidades.Reserva.EstadoReserva;
+import modelo.entidades.Solicitud;
+import modelo.entidades.Solicitud.EstadoSolicitud;
+
 /**
  * Permite al Administrador cancelar de forma directa una reserva ya existente en el calendario,
  * a diferencia de revertir el comando de creación desde el historial. Al ejecutarse (execute()),
@@ -6,26 +12,39 @@
  * operaciones para aprovechar el mecanismo de deshacer y rehacer.
  */
 public class ComandoDeshacerReserva implements Comando {
-    private final Estudiante estudiante;
-    private final Profesor profesor;
-    private final int dia;
-    private final int bloque;
-    private final Calendario calendario;
+    private final Reserva reserva;
+    private boolean deshecha;
 
-    public ComandoDeshacerReserva(Estudiante estudiante, Profesor profesor, int dia, int bloque, Calendario calendario) {
-        this.estudiante = estudiante;
-        this.profesor = profesor;
-        this.dia = dia;
-        this.bloque = bloque;
-        this.calendario = calendario;
+    public ComandoDeshacerReserva(Reserva reserva) {
+        this.reserva = reserva;
     }
 
-    /**
-     * Libera el bloque horario del profesor y del estudiante en el calendario, cancelando la reserva existente.
-     */
     @Override
     public void execute() {
-        calendario.liberarBloque(estudiante, profesor, dia, bloque);
-        bloqueLiberado = true;
+        deshacer();
+    }
+
+    public void deshacer() {
+        if (reserva == null || deshecha) {
+            return;
+        }
+
+        reserva.setEstado(EstadoReserva.CANCELADA);
+
+        Solicitud solicitudOrigen = reserva.getSolicitudOrigen();
+        if (solicitudOrigen != null) {
+            solicitudOrigen.setEstado(EstadoSolicitud.PENDIENTE);
+        }
+
+        deshecha = true;
+    }
+
+    public Reserva getReserva() {
+        return reserva;
+    }
+
+    public boolean isDeshecha() {
+        return deshecha;
     }
 }
+
