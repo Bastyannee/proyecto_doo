@@ -81,7 +81,7 @@ public class PanelDetalleSoli extends JPanel {
 
     public Solicitud getSolicitudActual() { return solicitudActual; }
 
-    // ── Construcción UI ──────────────────────────────────────
+    //  Construcción UI
 
     private JPanel crearEncabezado() {
         JPanel p = new JPanel(new BorderLayout());
