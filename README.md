@@ -38,9 +38,9 @@ Durante el desarrollo de la arquitectura, el equipo tomó decisiones clave para 
 
 ## 5. Problemas Identificados y Autocrítica
 A lo largo del ciclo de vida del desarrollo, el equipo enfrentó desafíos tanto técnicos como de coordinación:
-* **Colisiones en la Integración Continua (Git):** [Aquí pueden explayarse sobre los conflictos de merge. Por ejemplo: "Al trabajar en ramas paralelas (`feature/modelo-estrategias`, `feature/vista-proxy`), enfrentamos solapamientos lógicos, como la creación de excepciones redundantes (`ConflictoHorarioException` vs `HorarioOcupadoException`). Esto evidenció la necesidad de mejorar la comunicación técnica antes de integrar ramas hacia `main`."]
-* **Acoplamiento Inicial Vista-Modelo:** [Por ejemplo: "Inicialmente costó definir cómo la UI leería los datos sin acoplarse a `GestorDatos`. La implementación tardía de la interfaz `PerfilSeleccionable` retrasó ligeramente el ensamblaje visual."]
-* **Autocrítica:** [Por ejemplo: "Como equipo, logramos un excelente diseño algorítmico y cobertura de pruebas unitarias (JUnit 5), pero pudimos haber definido los contratos de las interfaces (como las firmas del patrón Command) de forma más estricta en las reuniones de planificación para evitar refactorizaciones de última hora."]
+* **Colisiones en la Integración Continua (Git):** Conflictos de merge. Al trabajar en ramas paralelas (`feature/modelo-estrategias`, `feature/vista-proxy`), enfrentamos solapamientos lógicos, como la creación de excepciones redundantes (`ConflictoHorarioException` vs `HorarioOcupadoException`). Esto evidenció la necesidad de mejorar la comunicación técnica antes de integrar ramas hacia `main`.
+* **Acoplamiento Inicial Vista-Modelo:** Inicialmente costó definir cómo la UI leería los datos sin acoplarse a `GestorDatos`. La implementación tardía de la interfaz `PerfilSeleccionable` retrasó ligeramente el ensamblaje visual.
+* **Autocrítica:** Como equipo, logramos un excelente diseño algorítmico y cobertura de pruebas unitarias (JUnit 5), pero pudimos haber definido los contratos de las interfaces (como las firmas del patrón Command) de forma más estricta en las reuniones de planificación para evitar refactorizaciones de última hora.
 
 
 ## 6. Diagrama UML del proyecto
