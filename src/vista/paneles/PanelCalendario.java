@@ -30,9 +30,6 @@ import java.time.LocalDate;
  *   2. HistorialOperaciones.ejecutar(comando) → llama execute() internamente
  *   3. Si comando.fueExitosa() → navegar a confirmación
  *   4. Si no → mostrar comando.getMensajeError() al admin
- *
- * Este flujo respeta que ComandoCrearReserva maneja ConflictoHorarioException
- * internamente y lo guarda en mensajeError en vez de relanzarlo.
  */
 public class PanelCalendario extends JPanel implements Observador {
 
@@ -59,7 +56,8 @@ public class PanelCalendario extends JPanel implements Observador {
         this.labelInfo    = new JLabel(" ");
         this.celdas       = new JLabel[ConstantesHorario.DIAS][ConstantesHorario.BLOQUES];
         this.grillaPanel  = new JPanel();
-        this.btnConfirmar = new JButton("Confirmar reserva");
+
+        this.btnConfirmar = new JButton("Confirmar Reserva");
 
         setLayout(new BorderLayout());
         setBackground(Tema.FONDO);
@@ -88,14 +86,16 @@ public class PanelCalendario extends JPanel implements Observador {
                 boolean disponible = perfil.isDisponible(d, b);
                 JLabel celda = celdas[d][b];
                 celda.setBackground(disponible ? Tema.DISPONIBLE : Tema.NO_DISPONIBLE);
-                celda.setForeground(Tema.TEXTO_PRIMARIO);
-                celda.setText(disponible ? "✓" : "");
 
                 for (var l : celda.getMouseListeners())
                     celda.removeMouseListener(l);
 
                 if (disponible) {
+                    celda.setForeground(Tema.TEXTO_PRIMARIO);
+                    celda.setFont(Tema.FUENTE_CUERPO);
+                    celda.setText("✓");
                     celda.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
                     final int fd = d, fb = b;
                     celda.addMouseListener(new MouseAdapter() {
                         @Override public void mouseClicked(MouseEvent e) {
@@ -103,7 +103,7 @@ public class PanelCalendario extends JPanel implements Observador {
                         }
                         @Override public void mouseEntered(MouseEvent e) {
                             if (fd != diaSeleccionado || fb != bloqueSeleccionado)
-                                celda.setBackground(new Color(100, 200, 100));
+                                celda.setBackground(new Color(100, 200, 100)); // Efecto Hover verde claro
                         }
                         @Override public void mouseExited(MouseEvent e) {
                             if (fd != diaSeleccionado || fb != bloqueSeleccionado)
@@ -111,6 +111,9 @@ public class PanelCalendario extends JPanel implements Observador {
                         }
                     });
                 } else {
+                    celda.setForeground(new Color(180, 185, 190));
+                    celda.setFont(Tema.FUENTE_CUERPO.deriveFont(Font.BOLD));
+                    celda.setText("Ocupado");
                     celda.setCursor(Cursor.getDefaultCursor());
                 }
             }
@@ -119,7 +122,7 @@ public class PanelCalendario extends JPanel implements Observador {
         revalidate();
     }
 
-    // ── Selección y confirmación ──────────────────────────────
+    // Selección y confirmación
 
     private void seleccionarBloque(int dia, int bloque) {
         if (diaSeleccionado >= 0) {
@@ -135,13 +138,6 @@ public class PanelCalendario extends JPanel implements Observador {
         btnConfirmar.setEnabled(true);
     }
 
-    /**
-     * Crea y ejecuta ComandoCrearReserva via HistorialOperaciones.
-     *
-     * Constructor correcto: (Solicitud, Tutor, LocalDate, diaIndex, bloqueIndex)
-     * Verificamos fueExitosa() porque ComandoCrearReserva captura
-     * ConflictoHorarioException internamente en vez de relanzarla.
-     */
     private void confirmarReserva() {
         Tutor     tutor     = ProxyTutor.getInstancia().getTutorActual();
         Solicitud solicitud = navegador.getSolicitudActiva();
@@ -164,7 +160,6 @@ public class PanelCalendario extends JPanel implements Observador {
             return;
         }
 
-        // Firma correcta del constructor real de ComandoCrearReserva
         ComandoCrearReserva comando = new ComandoCrearReserva(
                 solicitud,
                 tutor,
@@ -173,7 +168,6 @@ public class PanelCalendario extends JPanel implements Observador {
                 bloqueSeleccionado
         );
 
-        // execute() maneja ConflictoHorarioException internamente
         HistorialOperaciones.getInstancia().ejecutar(comando);
 
         if (comando.fueExitosa()) {
@@ -185,7 +179,6 @@ public class PanelCalendario extends JPanel implements Observador {
                     bloqueSeleccionado
             );
         } else {
-            // El comando capturó el conflicto — mostramos el mensaje guardado
             JOptionPane.showMessageDialog(this,
                     comando.getMensajeError(),
                     "Conflicto de horario",
@@ -266,16 +259,14 @@ public class PanelCalendario extends JPanel implements Observador {
         btnVolver.setFocusPainted(false);
         btnVolver.setBorderPainted(false);
         btnVolver.setPreferredSize(new Dimension(130, Tema.ALTO_BOTON));
-        btnVolver.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btnVolver.addActionListener(e -> navegador.mostrarBusqueda());
 
         btnConfirmar.setFont(Tema.FUENTE_BOTON);
-        btnConfirmar.setBackground(Tema.ACENTO);
+        btnConfirmar.setBackground(Tema.PRIMARIO);
         btnConfirmar.setForeground(Color.WHITE);
         btnConfirmar.setFocusPainted(false);
         btnConfirmar.setBorderPainted(false);
         btnConfirmar.setPreferredSize(new Dimension(190, Tema.ALTO_BOTON));
-        btnConfirmar.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btnConfirmar.setEnabled(false);
         btnConfirmar.addActionListener(e -> confirmarReserva());
 
