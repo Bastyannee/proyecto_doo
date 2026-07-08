@@ -1,10 +1,11 @@
 package vista.paneles;
 
+import controlador.comandos.ComandoCrearReserva;
+import controlador.comandos.HistorialOperaciones;
+import modelo.ConflictoHorarioException;
 import controlador.eventos.Observador;
 import modelo.ConflictoHorarioException;
-import modelo.GestorDatos;
 import modelo.entidades.ConstantesHorario;
-import modelo.entidades.Reserva;
 import modelo.entidades.Solicitud;
 import modelo.entidades.Tutor;
 import vista.Navegador;
@@ -22,23 +23,11 @@ import java.time.LocalDate;
 
 /**
  * Muestra la disponibilidad del tutor activo y permite confirmar una reserva.
-
- * PATRÓN OBSERVER:
- * Implementa Observador y se registra en ProxyTutor al construirse.
- * Cuando el admin selecciona un tutor en PanelBusqueda, actualizar()
- * se ejecuta automáticamente y la grilla se redibuja sola.
-
- * PATRÓN PROXY:
- * Trabaja con PerfilSeleccionable, nunca con Tutor directamente.
- * No sabe si habla con el objeto real o con el ProxyTutor.
-
- * FLUJO DE RESERVA:
- * 1. Admin selecciona tutor en PanelBusqueda → ProxyTutor notifica → actualizar()
- * 2. Admin hace clic en un bloque verde → seleccionarBloque()
- * 3. Admin hace clic en "Confirmar reserva" → confirmarReserva()
- * 4. Se crea Reserva con (Tutor, Estudiante, Solicitud, fecha, dia, bloque)
- * 5. GestorDatos.guardarReserva() valida conflictos y guarda
- * 6. Navegador navega a PanelConfirmacion con los datos del resumen
+ *
+ * INTEGRACIÓN CON HISTORIALOPERACIONES:
+ * Al confirmar, crea un ComandoCrearReserva y lo pasa a
+ * HistorialOperaciones.ejecutar(), que llama a execute() internamente
+ * y apila el comando. Esto habilita el "deshacer" desde PanelHistorial.
  */
 public class PanelCalendario extends JPanel implements Observador {
 
@@ -56,7 +45,6 @@ public class PanelCalendario extends JPanel implements Observador {
     private final JPanel     grillaPanel;
     private final JButton    btnConfirmar;
 
-    // Bloque seleccionado por el admin para reservar
     private int diaSeleccionado    = -1;
     private int bloqueSeleccionado = -1;
 
@@ -74,19 +62,11 @@ public class PanelCalendario extends JPanel implements Observador {
         add(crearCuerpo(),     BorderLayout.CENTER);
         add(crearBotones(),    BorderLayout.SOUTH);
 
-        // AUTO-REGISTRO: ProxyTutor llamará a actualizar() cada vez
-        // que el tutor seleccionado cambie en PanelBusqueda.
         ProxyTutor.getInstancia().registrarObservador(this);
     }
 
-    // =========================================================
-    // Implementación de Observador
-    // =========================================================
+    // ── Observador ───────────────────────────────────────────
 
-    /**
-     * Llamado automáticamente por ProxyTutor cuando cambia el tutor.
-     * Actualiza encabezado, resetea la selección y redibuja la grilla.
-     */
     @Override
     public void actualizar(PerfilSeleccionable perfil) {
         labelNombre.setText(perfil.getNombre() + "  ·  " + perfil.getMateria());
@@ -94,22 +74,18 @@ public class PanelCalendario extends JPanel implements Observador {
                 "$%.0f/hora  ·  Haz clic en un bloque disponible para seleccionarlo",
                 perfil.getTarifa()));
 
-        // Resetear selección anterior
         diaSeleccionado    = -1;
         bloqueSeleccionado = -1;
         btnConfirmar.setEnabled(false);
 
-        // Actualizar cada celda de la grilla
         for (int d = 0; d < ConstantesHorario.DIAS; d++) {
             for (int b = 0; b < ConstantesHorario.BLOQUES; b++) {
                 boolean disponible = perfil.isDisponible(d, b);
                 JLabel celda = celdas[d][b];
-
                 celda.setBackground(disponible ? Tema.DISPONIBLE : Tema.NO_DISPONIBLE);
                 celda.setForeground(Tema.TEXTO_PRIMARIO);
                 celda.setText(disponible ? "✓" : "");
 
-                // Limpiar listeners anteriores para evitar acumulación
                 for (var l : celda.getMouseListeners())
                     celda.removeMouseListener(l);
 
@@ -117,17 +93,14 @@ public class PanelCalendario extends JPanel implements Observador {
                     celda.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
                     final int fd = d, fb = b;
                     celda.addMouseListener(new MouseAdapter() {
-                        @Override
-                        public void mouseClicked(MouseEvent e) {
+                        @Override public void mouseClicked(MouseEvent e) {
                             seleccionarBloque(fd, fb);
                         }
-                        @Override
-                        public void mouseEntered(MouseEvent e) {
+                        @Override public void mouseEntered(MouseEvent e) {
                             if (fd != diaSeleccionado || fb != bloqueSeleccionado)
                                 celda.setBackground(new Color(100, 200, 100));
                         }
-                        @Override
-                        public void mouseExited(MouseEvent e) {
+                        @Override public void mouseExited(MouseEvent e) {
                             if (fd != diaSeleccionado || fb != bloqueSeleccionado)
                                 celda.setBackground(Tema.DISPONIBLE);
                         }
@@ -137,24 +110,18 @@ public class PanelCalendario extends JPanel implements Observador {
                 }
             }
         }
-
         repaint();
         revalidate();
     }
 
-    // =========================================================
-    // Lógica de selección y confirmación de reserva
-    // =========================================================
+    // ── Selección y confirmación ──────────────────────────────
 
     private void seleccionarBloque(int dia, int bloque) {
-        // Restaurar celda previamente seleccionada
         if (diaSeleccionado >= 0) {
             celdas[diaSeleccionado][bloqueSeleccionado].setBackground(Tema.DISPONIBLE);
             celdas[diaSeleccionado][bloqueSeleccionado].setForeground(Tema.TEXTO_PRIMARIO);
             celdas[diaSeleccionado][bloqueSeleccionado].setText("✓");
         }
-
-        // Marcar nueva selección
         diaSeleccionado    = dia;
         bloqueSeleccionado = bloque;
         celdas[dia][bloque].setBackground(Tema.PRIMARIO);
@@ -164,11 +131,9 @@ public class PanelCalendario extends JPanel implements Observador {
     }
 
     /**
-     * Crea y guarda la reserva con el constructor correcto de Reserva:
-     * (Tutor, Estudiante, Solicitud, LocalDate, diaIndex, bloqueIndex)
-
-     * La Solicitud viene de PanelDetalleSoli a través del Navegador.
-     * Si no hay solicitud activa, se usa la primera pendiente como fallback.
+     * Crea un ComandoCrearReserva y lo ejecuta via HistorialOperaciones.
+     * El historial apila el comando solo si execute() tiene éxito,
+     * habilitando el "deshacer" desde PanelHistorial.
      */
     private void confirmarReserva() {
         Tutor     tutor     = ProxyTutor.getInstancia().getTutorActual();
@@ -193,19 +158,18 @@ public class PanelCalendario extends JPanel implements Observador {
         }
 
         try {
-            // Constructor correcto: (Tutor, Estudiante, Solicitud, LocalDate, dia, bloque)
-            Reserva reserva = new Reserva(
-                    tutor,
+            // Crear el comando con todos los datos necesarios
+            ComandoCrearReserva comando = new ComandoCrearReserva(
                     solicitud.getEstudiante(),
-                    solicitud,
-                    LocalDate.now(),
+                    tutor,
                     diaSeleccionado,
                     bloqueSeleccionado
             );
 
-            GestorDatos.getInstancia().guardarReserva(reserva);
+            // Ejecutar via historial: execute() + apilar si tiene éxito
+            HistorialOperaciones.getInstancia().ejecutar(comando);
 
-            // Navegar a confirmación pasando todos los datos para el resumen
+            // Navegar a confirmación
             navegador.mostrarConfirmacion(
                     tutor,
                     solicitud.getEstudiante(),
@@ -214,7 +178,7 @@ public class PanelCalendario extends JPanel implements Observador {
                     bloqueSeleccionado
             );
 
-        } catch (ConflictoHorarioException ex) {
+        } catch (HorarioOcupadoException | ConflictoHorarioException ex) {
             JOptionPane.showMessageDialog(this,
                     ex.getMessage(),
                     "Conflicto de horario",
@@ -222,27 +186,21 @@ public class PanelCalendario extends JPanel implements Observador {
         }
     }
 
-    // =========================================================
-    // Construcción de la UI
-    // =========================================================
+    // ── UI ───────────────────────────────────────────────────
 
     private JPanel crearEncabezado() {
         JPanel p = new JPanel(new BorderLayout());
         p.setBackground(Tema.PRIMARIO);
         p.setBorder(new EmptyBorder(Tema.PADDING, Tema.PADDING, Tema.PADDING, Tema.PADDING));
-
         labelNombre.setFont(Tema.FUENTE_TITULO);
         labelNombre.setForeground(Color.WHITE);
-
         labelInfo.setFont(Tema.FUENTE_CUERPO);
         labelInfo.setForeground(new Color(200, 220, 255));
-
         JPanel textos = new JPanel();
         textos.setLayout(new BoxLayout(textos, BoxLayout.Y_AXIS));
         textos.setBackground(Tema.PRIMARIO);
         textos.add(labelNombre);
         textos.add(labelInfo);
-
         p.add(textos, BorderLayout.WEST);
         return p;
     }
@@ -251,26 +209,18 @@ public class PanelCalendario extends JPanel implements Observador {
         JPanel p = new JPanel(new BorderLayout());
         p.setBackground(Tema.FONDO);
         p.setBorder(new EmptyBorder(Tema.PADDING, Tema.PADDING, 0, Tema.PADDING));
-
         grillaPanel.setLayout(new GridLayout(
                 ConstantesHorario.BLOQUES + 1,
                 ConstantesHorario.DIAS   + 1, 3, 3));
         grillaPanel.setBackground(Tema.FONDO);
         construirGrilla();
-
         p.add(grillaPanel, BorderLayout.CENTER);
         return p;
     }
 
     private void construirGrilla() {
-        // Esquina vacía
         grillaPanel.add(celdaEncabezado(""));
-
-        // Encabezados de días
-        for (String d : DIAS)
-            grillaPanel.add(celdaEncabezado(d));
-
-        // Filas de bloques
+        for (String d : DIAS) grillaPanel.add(celdaEncabezado(d));
         for (int b = 0; b < ConstantesHorario.BLOQUES; b++) {
             grillaPanel.add(celdaEncabezado(BLOQUES[b]));
             for (int d = 0; d < ConstantesHorario.DIAS; d++) {
