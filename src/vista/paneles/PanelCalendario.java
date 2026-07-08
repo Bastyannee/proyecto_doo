@@ -2,9 +2,7 @@ package vista.paneles;
 
 import controlador.comandos.ComandoCrearReserva;
 import controlador.comandos.HistorialOperaciones;
-import modelo.ConflictoHorarioException;
 import controlador.eventos.Observador;
-import modelo.ConflictoHorarioException;
 import modelo.entidades.ConstantesHorario;
 import modelo.entidades.Solicitud;
 import modelo.entidades.Tutor;
@@ -24,10 +22,17 @@ import java.time.LocalDate;
 /**
  * Muestra la disponibilidad del tutor activo y permite confirmar una reserva.
  *
- * INTEGRACIÓN CON HISTORIALOPERACIONES:
- * Al confirmar, crea un ComandoCrearReserva y lo pasa a
- * HistorialOperaciones.ejecutar(), que llama a execute() internamente
- * y apila el comando. Esto habilita el "deshacer" desde PanelHistorial.
+ * PATRÓN OBSERVER: se registra en ProxyTutor al construirse.
+ * PATRÓN PROXY: trabaja con PerfilSeleccionable, nunca con Tutor directamente.
+ *
+ * FLUJO DE CONFIRMACIÓN:
+ *   1. Crea ComandoCrearReserva(solicitud, tutor, fecha, dia, bloque)
+ *   2. HistorialOperaciones.ejecutar(comando) → llama execute() internamente
+ *   3. Si comando.fueExitosa() → navegar a confirmación
+ *   4. Si no → mostrar comando.getMensajeError() al admin
+ *
+ * Este flujo respeta que ComandoCrearReserva maneja ConflictoHorarioException
+ * internamente y lo guarda en mensajeError en vez de relanzarlo.
  */
 public class PanelCalendario extends JPanel implements Observador {
 
@@ -131,9 +136,11 @@ public class PanelCalendario extends JPanel implements Observador {
     }
 
     /**
-     * Crea un ComandoCrearReserva y lo ejecuta via HistorialOperaciones.
-     * El historial apila el comando solo si execute() tiene éxito,
-     * habilitando el "deshacer" desde PanelHistorial.
+     * Crea y ejecuta ComandoCrearReserva via HistorialOperaciones.
+     *
+     * Constructor correcto: (Solicitud, Tutor, LocalDate, diaIndex, bloqueIndex)
+     * Verificamos fueExitosa() porque ComandoCrearReserva captura
+     * ConflictoHorarioException internamente en vez de relanzarla.
      */
     private void confirmarReserva() {
         Tutor     tutor     = ProxyTutor.getInstancia().getTutorActual();
@@ -157,19 +164,19 @@ public class PanelCalendario extends JPanel implements Observador {
             return;
         }
 
-        try {
-            // Crear el comando con todos los datos necesarios
-            ComandoCrearReserva comando = new ComandoCrearReserva(
-                    solicitud.getEstudiante(),
-                    tutor,
-                    diaSeleccionado,
-                    bloqueSeleccionado
-            );
+        // Firma correcta del constructor real de ComandoCrearReserva
+        ComandoCrearReserva comando = new ComandoCrearReserva(
+                solicitud,
+                tutor,
+                LocalDate.now(),
+                diaSeleccionado,
+                bloqueSeleccionado
+        );
 
-            // Ejecutar via historial: execute() + apilar si tiene éxito
-            HistorialOperaciones.getInstancia().ejecutar(comando);
+        // execute() maneja ConflictoHorarioException internamente
+        HistorialOperaciones.getInstancia().ejecutar(comando);
 
-            // Navegar a confirmación
+        if (comando.fueExitosa()) {
             navegador.mostrarConfirmacion(
                     tutor,
                     solicitud.getEstudiante(),
@@ -177,10 +184,10 @@ public class PanelCalendario extends JPanel implements Observador {
                     diaSeleccionado,
                     bloqueSeleccionado
             );
-
-        } catch (HorarioOcupadoException | ConflictoHorarioException ex) {
+        } else {
+            // El comando capturó el conflicto — mostramos el mensaje guardado
             JOptionPane.showMessageDialog(this,
-                    ex.getMessage(),
+                    comando.getMensajeError(),
                     "Conflicto de horario",
                     JOptionPane.WARNING_MESSAGE);
         }
