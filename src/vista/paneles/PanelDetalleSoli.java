@@ -13,8 +13,14 @@ import java.awt.*;
 import java.util.Optional;
 
 /**
- * Muestra el detalle completo de una solicitud: datos del estudiante,
- * comentario y grilla de bloques horarios deseados.
+ * Muestra el detalle completo de una solicitud seleccionada.
+
+ * POSICION EN EL FLUJO:
+ * Bienvenida → [Ver detalle] → DetalleSolicitud → [Buscar tutor] → Busqueda
+
+ * Este panel es el paso intermedio obligatorio. Al cargarse, registra
+ * la solicitud activa en Navegador para que PanelCalendario pueda
+ * usarla al crear la Reserva con el estudiante correcto.
  */
 public class PanelDetalleSoli extends JPanel {
 
@@ -24,34 +30,42 @@ public class PanelDetalleSoli extends JPanel {
     private final JLabel    labelCorreo;
     private final JLabel    labelAsunto;
     private final JLabel    labelComentario;
+    private final JLabel    labelEstadoFlujo;
     private final JLabel[][] celdas;
     private final JPanel    grillaPanel;
     private Solicitud       solicitudActual;
 
-    private static final String[] DIAS    = {"Lun","Mar","Mié","Jue","Vie"};
+    private static final String[] DIAS = {"Lun", "Mar", "Mié", "Jue", "Vie"};
     private static final String[] BLOQUES = {
-            "08:00","09:30","11:00","12:30","14:00","15:30"
+            "08:00", "09:30", "11:00", "12:30", "14:00", "15:30"
     };
 
     public PanelDetalleSoli(Navegador navegador) {
-        this.navegador      = navegador;
-        this.labelNombre    = new JLabel();
-        this.labelCarrera   = new JLabel();
-        this.labelCorreo    = new JLabel();
-        this.labelAsunto    = new JLabel();
-        this.labelComentario= new JLabel();
-        this.celdas         = new JLabel[ConstantesHorario.DIAS][ConstantesHorario.BLOQUES];
-        this.grillaPanel    = new JPanel();
+        this.navegador       = navegador;
+        this.labelNombre     = new JLabel();
+        this.labelCarrera    = new JLabel();
+        this.labelCorreo     = new JLabel();
+        this.labelAsunto     = new JLabel();
+        this.labelComentario = new JLabel();
+        this.labelEstadoFlujo = new JLabel();
+        this.celdas          = new JLabel[ConstantesHorario.DIAS][ConstantesHorario.BLOQUES];
+        this.grillaPanel     = new JPanel();
 
         setLayout(new BorderLayout());
         setBackground(Tema.FONDO);
-        add(crearEncabezado(),  BorderLayout.NORTH);
-        add(crearCuerpo(),      BorderLayout.CENTER);
-        add(crearBotones(),     BorderLayout.SOUTH);
+        add(crearEncabezado(), BorderLayout.NORTH);
+        add(crearCuerpo(),     BorderLayout.CENTER);
+        add(crearBotones(),    BorderLayout.SOUTH);
     }
 
     // ── API pública ──────────────────────────────────────────
 
+    /**
+     * Carga los datos de la solicitud seleccionada.
+     * Llamado por Navegador.mostrarDetalleSolicitud() antes de navegar
+     * a este panel — garantiza que solicitudActual nunca sea null
+     * cuando el panel es visible.
+     */
     public void cargarSolicitud(String solicitudId) {
         Optional<Solicitud> resultado =
                 GestorDatos.getInstancia().buscarSolicitudPorId(solicitudId);
@@ -60,6 +74,7 @@ public class PanelDetalleSoli extends JPanel {
         this.solicitudActual = resultado.get();
         var e = solicitudActual.getEstudiante();
 
+        // Datos del estudiante
         labelNombre.setText(e.getNombre());
         labelCarrera.setText(e.getCarrera() + " — Semestre " + e.getSemestre());
         labelCorreo.setText(e.getCorreo());
@@ -69,6 +84,10 @@ public class PanelDetalleSoli extends JPanel {
                         ? "Sin comentarios adicionales."
                         : solicitudActual.getComentario()) + "</i></html>");
 
+        // Indicador de flujo
+        labelEstadoFlujo.setText("Solicitud activa: \"" + solicitudActual.getAsunto() + "\"");
+
+        // Grilla de horarios deseados
         boolean[][] horario = solicitudActual.getHorarioDeseado();
         for (int d = 0; d < ConstantesHorario.DIAS; d++) {
             for (int b = 0; b < ConstantesHorario.BLOQUES; b++) {
@@ -77,20 +96,36 @@ public class PanelDetalleSoli extends JPanel {
                 celdas[d][b].setText(horario[d][b] ? "✓" : "");
             }
         }
+
+        revalidate();
+        repaint();
     }
 
     public Solicitud getSolicitudActual() { return solicitudActual; }
 
-    //  Construcción UI
+    // ── Construcción UI ──────────────────────────────────────
 
     private JPanel crearEncabezado() {
         JPanel p = new JPanel(new BorderLayout());
         p.setBackground(Tema.PRIMARIO);
         p.setBorder(new EmptyBorder(Tema.PADDING, Tema.PADDING, Tema.PADDING, Tema.PADDING));
-        JLabel t = new JLabel("Detalle de Solicitud");
-        t.setFont(Tema.FUENTE_TITULO);
-        t.setForeground(Color.WHITE);
-        p.add(t, BorderLayout.WEST);
+
+        JPanel textos = new JPanel();
+        textos.setLayout(new BoxLayout(textos, BoxLayout.Y_AXIS));
+        textos.setBackground(Tema.PRIMARIO);
+
+        JLabel titulo = new JLabel("Detalle de Solicitud");
+        titulo.setFont(Tema.FUENTE_TITULO);
+        titulo.setForeground(Color.WHITE);
+
+        labelEstadoFlujo.setFont(Tema.FUENTE_CUERPO);
+        labelEstadoFlujo.setForeground(new Color(180, 210, 255));
+
+        textos.add(titulo);
+        textos.add(Box.createVerticalStrut(4));
+        textos.add(labelEstadoFlujo);
+
+        p.add(textos, BorderLayout.WEST);
         return p;
     }
 
@@ -141,7 +176,7 @@ public class PanelDetalleSoli extends JPanel {
                 new LineBorder(Tema.BORDE, 1, true),
                 new EmptyBorder(Tema.PADDING, Tema.PADDING, Tema.PADDING, Tema.PADDING)));
 
-        JLabel titulo = new JLabel("Horarios Deseados");
+        JLabel titulo = new JLabel("Horarios Deseados por el Estudiante");
         titulo.setFont(Tema.FUENTE_SUBTITULO);
         titulo.setForeground(Tema.TEXTO_PRIMARIO);
 
@@ -157,12 +192,12 @@ public class PanelDetalleSoli extends JPanel {
     }
 
     private void construirGrilla() {
-        grillaPanel.add(celda("", Tema.ENCABEZADO_TABLA, Color.WHITE, Tema.FUENTE_PEQUENA));
+        grillaPanel.add(celdaEncabezado(""));
         for (String d : DIAS)
-            grillaPanel.add(celda(d, Tema.ENCABEZADO_TABLA, Color.WHITE, Tema.FUENTE_PEQUENA));
+            grillaPanel.add(celdaEncabezado(d));
 
         for (int b = 0; b < ConstantesHorario.BLOQUES; b++) {
-            grillaPanel.add(celda(BLOQUES[b], Tema.ENCABEZADO_TABLA, Color.WHITE, Tema.FUENTE_PEQUENA));
+            grillaPanel.add(celdaEncabezado(BLOQUES[b]));
             for (int d = 0; d < ConstantesHorario.DIAS; d++) {
                 JLabel c = new JLabel("", SwingConstants.CENTER);
                 c.setOpaque(true);
@@ -175,12 +210,12 @@ public class PanelDetalleSoli extends JPanel {
         }
     }
 
-    private JLabel celda(String texto, Color fondo, Color texto2, Font fuente) {
+    private JLabel celdaEncabezado(String texto) {
         JLabel l = new JLabel(texto, SwingConstants.CENTER);
         l.setOpaque(true);
-        l.setBackground(fondo);
-        l.setForeground(texto2);
-        l.setFont(fuente);
+        l.setBackground(Tema.ENCABEZADO_TABLA);
+        l.setForeground(Color.WHITE);
+        l.setFont(Tema.FUENTE_PEQUENA);
         l.setBorder(new LineBorder(Color.WHITE, 1));
         return l;
     }
@@ -188,25 +223,33 @@ public class PanelDetalleSoli extends JPanel {
     private JPanel crearBotones() {
         JPanel p = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         p.setBackground(Tema.FONDO);
-        p.setBorder(new EmptyBorder(Tema.PADDING_PEQUEÑO, Tema.PADDING,
-                Tema.PADDING, Tema.PADDING));
+        p.setBorder(new EmptyBorder(
+                Tema.PADDING_PEQUEÑO, Tema.PADDING, Tema.PADDING, Tema.PADDING));
 
-        JButton btnVolver  = boton("← Volver",        Tema.TEXTO_SECUNDARIO, Color.WHITE);
-        JButton btnBuscar  = boton("Buscar tutor →",  Tema.PRIMARIO,         Color.WHITE);
+        JButton btnVolver = crearBoton("← Volver", Tema.TEXTO_SECUNDARIO);
+        JButton btnBuscar = crearBoton("Buscar tutor →", Tema.PRIMARIO);
 
         btnVolver.addActionListener(e -> navegador.mostrarBienvenida());
-        btnBuscar.addActionListener(e -> navegador.mostrarBusqueda());
+        btnBuscar.addActionListener(e -> {
+            if (solicitudActual == null) {
+                JOptionPane.showMessageDialog(this,
+                        "No hay solicitud cargada. Vuelve al inicio.",
+                        "Aviso", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            navegador.mostrarBusqueda();
+        });
 
         p.add(btnVolver);
         p.add(btnBuscar);
         return p;
     }
 
-    private JButton boton(String texto, Color fondo, Color texto2) {
+    private JButton crearBoton(String texto, Color fondo) {
         JButton b = new JButton(texto);
         b.setFont(Tema.FUENTE_BOTON);
         b.setBackground(fondo);
-        b.setForeground(texto2);
+        b.setForeground(Color.WHITE);
         b.setFocusPainted(false);
         b.setBorderPainted(false);
         b.setPreferredSize(new Dimension(160, Tema.ALTO_BOTON));
