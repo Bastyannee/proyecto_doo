@@ -1,10 +1,7 @@
 package vista.paneles;
 
-import controlador.comandos.ComandoCrearReserva;
-import controlador.comandos.Comando;
 import controlador.comandos.HistorialOperaciones;
 import modelo.GestorDatos;
-import modelo.entidades.ConstantesHorario;
 import modelo.entidades.Reserva;
 import modelo.entidades.Tutor;
 import vista.Navegador;
@@ -24,14 +21,17 @@ import java.util.List;
 /**
  * Panel de historial de reservas confirmadas.
 
- * Muestra todas las reservas registradas en GestorDatos con:
- * - Foto circular del tutor (desde assets/fotos/)
- * - Datos completos de la reserva
- * - Botón "Cancelar" por fila
+ * Muestra todas las reservas del sistema con foto circular del tutor,
+ * badge de estado y botón de cancelar por fila.
 
- * También permite deshacer la última operación via
- * HistorialOperaciones.deshacerUltimo(), que llama a
- * unexecute() del ComandoCrearReserva en el tope del stack.
+ * CANCELAR RESERVA:
+ * Usa reserva.setEstado(CANCELADA) — el metodo correcto según Reserva.java.
+ * No llama a cancelar() que no existe en el modelo.
+
+ * DESHACER:
+ * Llama a HistorialOperaciones.deshacerUltimo() que internamente cancela
+ * la reserva y restaura la solicitud a PENDIENTE, sin necesitar unexecute()
+ * en la interfaz Comando.
  */
 public class PanelHistorial extends JPanel {
 
@@ -56,18 +56,18 @@ public class PanelHistorial extends JPanel {
         refrescarHistorial();
     }
 
-    // ── API pública ──────────────────────────────────────────
+    // ── API publica ──────────────────────────────────────────
 
     public void refrescarHistorial() {
         List<Reserva> reservas = GestorDatos.getInstancia().getReservas();
         panelReservas.removeAll();
         panelReservas.setLayout(new GridLayout(0, 1, 0, Tema.PADDING_PEQUEÑO));
         panelReservas.setBorder(new EmptyBorder(
-            Tema.PADDING, Tema.PADDING, Tema.PADDING, Tema.PADDING));
+                Tema.PADDING, Tema.PADDING, Tema.PADDING, Tema.PADDING));
 
         if (reservas.isEmpty()) {
             JLabel vacio = new JLabel(
-                "No hay reservas confirmadas todavía.", SwingConstants.CENTER);
+                    "No hay reservas confirmadas todavía.", SwingConstants.CENTER);
             vacio.setFont(Tema.FUENTE_CUERPO);
             vacio.setForeground(Tema.TEXTO_SECUNDARIO);
             panelReservas.setLayout(new BorderLayout());
@@ -79,52 +79,46 @@ public class PanelHistorial extends JPanel {
         }
 
         int n = reservas.size();
-        labelConteo.setText(n == 0
-            ? "Sin reservas"
-            : n + " reserva(s) en el historial");
-
+        labelConteo.setText(n == 0 ? "Sin reservas" : n + " reserva(s) en el historial");
         btnDeshacer.setEnabled(HistorialOperaciones.getInstancia().puedeDeshacer());
         panelReservas.revalidate();
         panelReservas.repaint();
     }
 
-    // ── Construcción de filas ─────────────────────────────────
+    // ── Filas de reserva ─────────────────────────────────────
 
     private JPanel crearFilaReserva(Reserva reserva) {
         JPanel fila = new JPanel(new BorderLayout(Tema.PADDING, 0));
         fila.setBackground(Tema.FONDO_TARJETA);
         fila.setBorder(BorderFactory.createCompoundBorder(
-            new LineBorder(Tema.BORDE, 1, true),
-            new EmptyBorder(Tema.PADDING_PEQUEÑO, Tema.PADDING,
-                            Tema.PADDING_PEQUEÑO, Tema.PADDING)));
+                new LineBorder(Tema.BORDE, 1, true),
+                new EmptyBorder(Tema.PADDING_PEQUEÑO, Tema.PADDING,
+                        Tema.PADDING_PEQUEÑO, Tema.PADDING)));
 
-        // Foto circular del tutor
+        // Foto circular
         JLabel foto = crearFotoCircular(reserva.getTutor());
 
-        // Datos de la reserva
+        // Datos
         JPanel datos = new JPanel();
         datos.setLayout(new BoxLayout(datos, BoxLayout.Y_AXIS));
         datos.setBackground(Tema.FONDO_TARJETA);
 
         JLabel lblTutor = new JLabel(
-            reserva.getTutor().getNombre() + "  ·  " + reserva.getTutor().getMateria());
+                reserva.getTutor().getNombre() + "  ·  " + reserva.getTutor().getMateria());
         lblTutor.setFont(Tema.FUENTE_SUBTITULO);
         lblTutor.setForeground(Tema.TEXTO_PRIMARIO);
 
         JLabel lblEstudiante = new JLabel(
-            "Estudiante: " + reserva.getEstudiante().getNombre()
-            + " — " + reserva.getEstudiante().getCarrera());
+                "Estudiante: " + reserva.getEstudiante().getNombre()
+                        + " — " + reserva.getEstudiante().getCarrera());
         lblEstudiante.setFont(Tema.FUENTE_CUERPO);
         lblEstudiante.setForeground(Tema.TEXTO_SECUNDARIO);
 
         JLabel lblHorario = new JLabel(
-            reserva.getNombreDia() + "  ·  " + reserva.getHora()
-            + "  ·  " + reserva.getFecha().toString());
+                reserva.getNombreDia() + "  ·  " + reserva.getHora()
+                        + "  ·  " + reserva.getFecha().toString());
         lblHorario.setFont(Tema.FUENTE_PEQUENA);
         lblHorario.setForeground(Tema.PRIMARIO);
-
-        // Badge de estado
-        JLabel lblEstado = crearBadgeEstado(reserva);
 
         datos.add(lblTutor);
         datos.add(Box.createVerticalStrut(3));
@@ -132,9 +126,11 @@ public class PanelHistorial extends JPanel {
         datos.add(Box.createVerticalStrut(3));
         datos.add(lblHorario);
 
-        // Panel derecho: estado + botón cancelar
+        // Derecha: badge + botón cancelar
         JPanel derecho = new JPanel(new BorderLayout(0, 4));
         derecho.setBackground(Tema.FONDO_TARJETA);
+
+        JLabel badge = crearBadge(reserva);
 
         JButton btnCancelar = new JButton("Cancelar");
         btnCancelar.setFont(Tema.FUENTE_PEQUENA);
@@ -145,46 +141,42 @@ public class PanelHistorial extends JPanel {
         btnCancelar.setPreferredSize(new Dimension(90, 30));
         btnCancelar.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btnCancelar.setEnabled(reserva.isActiva());
+        // Usa setEstado(CANCELADA) — el metodo correcto de Reserva
         btnCancelar.addActionListener(e -> cancelarReserva(reserva));
 
-        derecho.add(lblEstado,  BorderLayout.NORTH);
+        derecho.add(badge,       BorderLayout.NORTH);
         derecho.add(btnCancelar, BorderLayout.SOUTH);
 
-        fila.add(foto,   BorderLayout.WEST);
-        fila.add(datos,  BorderLayout.CENTER);
+        fila.add(foto,    BorderLayout.WEST);
+        fila.add(datos,   BorderLayout.CENTER);
         fila.add(derecho, BorderLayout.EAST);
-
         return fila;
     }
 
-    private JLabel crearBadgeEstado(Reserva reserva) {
+    private JLabel crearBadge(Reserva reserva) {
         String texto = reserva.isActiva() ? "ACTIVA" : "CANCELADA";
         Color  fondo = reserva.isActiva() ? Tema.ACENTO : Tema.TEXTO_SECUNDARIO;
-
-        JLabel badge = new JLabel(texto, SwingConstants.CENTER);
-        badge.setFont(Tema.FUENTE_PEQUENA);
-        badge.setForeground(Color.WHITE);
-        badge.setOpaque(true);
-        badge.setBackground(fondo);
-        badge.setBorder(new EmptyBorder(2, 8, 2, 8));
-        return badge;
+        JLabel b = new JLabel(texto, SwingConstants.CENTER);
+        b.setFont(Tema.FUENTE_PEQUENA);
+        b.setForeground(Color.WHITE);
+        b.setOpaque(true);
+        b.setBackground(fondo);
+        b.setBorder(new EmptyBorder(2, 8, 2, 8));
+        return b;
     }
 
     /**
-     * Carga la foto del tutor desde assets/fotos/ y la recorta en círculo.
-     * Si el archivo no existe, genera un avatar con las iniciales del tutor.
+     * Carga foto desde assets/fotos/ y la recorta en círculo.
+     * Si no existe el archivo, genera un avatar con las iniciales del tutor.
      */
     private JLabel crearFotoCircular(Tutor tutor) {
         int size = 60;
         BufferedImage imagen = null;
 
-        // Intentar cargar desde assets/fotos/
         if (tutor.getFotoPath() != null && !tutor.getFotoPath().isEmpty()) {
             try {
                 imagen = ImageIO.read(new File(tutor.getFotoPath()));
-            } catch (IOException ignored) {
-                // Si no existe el archivo, usamos el avatar de iniciales
-            }
+            } catch (IOException ignored) {}
         }
 
         BufferedImage circulo = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
@@ -192,23 +184,20 @@ public class PanelHistorial extends JPanel {
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
         if (imagen != null) {
-            // Escalar y recortar en círculo
             g2.setClip(new Ellipse2D.Float(0, 0, size, size));
-            Image escalada = imagen.getScaledInstance(size, size, Image.SCALE_SMOOTH);
-            g2.drawImage(escalada, 0, 0, null);
+            g2.drawImage(imagen.getScaledInstance(size, size, Image.SCALE_SMOOTH), 0, 0, null);
         } else {
-            // Avatar de iniciales
+            // Avatar de iniciales cuando no hay imagen
             g2.setColor(Tema.PRIMARIO);
             g2.fillOval(0, 0, size, size);
             g2.setColor(Color.WHITE);
             g2.setFont(new Font("Segoe UI", Font.BOLD, 20));
             FontMetrics fm = g2.getFontMetrics();
             String iniciales = obtenerIniciales(tutor.getNombre());
-            int x = (size - fm.stringWidth(iniciales)) / 2;
-            int y = (size - fm.getHeight()) / 2 + fm.getAscent();
-            g2.drawString(iniciales, x, y);
+            g2.drawString(iniciales,
+                    (size - fm.stringWidth(iniciales)) / 2,
+                    (size - fm.getHeight()) / 2 + fm.getAscent());
         }
-
         g2.dispose();
 
         JLabel label = new JLabel(new ImageIcon(circulo));
@@ -220,30 +209,29 @@ public class PanelHistorial extends JPanel {
     private String obtenerIniciales(String nombre) {
         String[] partes = nombre.trim().split("\\s+");
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < Math.min(2, partes.length); i++) {
+        for (int i = 0; i < Math.min(2, partes.length); i++)
             if (!partes[i].isEmpty())
                 sb.append(Character.toUpperCase(partes[i].charAt(0)));
-        }
         return sb.toString();
     }
 
-    // ── Lógica de cancelar y deshacer ────────────────────────
+    // ── Logica ───────────────────────────────────────────────
 
     private void cancelarReserva(Reserva reserva) {
-        int confirmacion = JOptionPane.showConfirmDialog(
-            this,
-            "¿Cancelar la reserva con " + reserva.getTutor().getNombre() + "?",
-            "Confirmar cancelación",
-            JOptionPane.YES_NO_OPTION,
-            JOptionPane.WARNING_MESSAGE);
+        int ok = JOptionPane.showConfirmDialog(this,
+                "¿Cancelar la reserva con " + reserva.getTutor().getNombre() + "?",
+                "Confirmar cancelación",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE);
 
-        if (confirmacion == JOptionPane.YES_OPTION) {
-            reserva.cancelar();
+        if (ok == JOptionPane.YES_OPTION) {
+            // setEstado es el método correcto — Reserva no tiene cancelar()
+            reserva.setEstado(Reserva.EstadoReserva.CANCELADA);
             refrescarHistorial();
         }
     }
 
-    // ── Construcción UI ──────────────────────────────────────
+    // ── UI ───────────────────────────────────────────────────
 
     private JPanel crearEncabezado() {
         JPanel p = new JPanel(new BorderLayout());
@@ -273,7 +261,7 @@ public class PanelHistorial extends JPanel {
         JPanel p = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         p.setBackground(Tema.FONDO);
         p.setBorder(new EmptyBorder(
-            Tema.PADDING_PEQUEÑO, Tema.PADDING, Tema.PADDING, Tema.PADDING));
+                Tema.PADDING_PEQUEÑO, Tema.PADDING, Tema.PADDING, Tema.PADDING));
 
         JButton btnVolver = new JButton("← Volver al inicio");
         btnVolver.setFont(Tema.FUENTE_BOTON);
@@ -297,8 +285,8 @@ public class PanelHistorial extends JPanel {
             if (deshecho) {
                 refrescarHistorial();
                 JOptionPane.showMessageDialog(this,
-                    "Última reserva deshecha exitosamente.",
-                    "Deshacer", JOptionPane.INFORMATION_MESSAGE);
+                        "Última reserva deshecha. La solicitud vuelve a estado pendiente.",
+                        "Deshacer exitoso", JOptionPane.INFORMATION_MESSAGE);
             }
         });
 
