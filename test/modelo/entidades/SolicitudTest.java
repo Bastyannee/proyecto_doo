@@ -1,4 +1,4 @@
-package test.modelo.entidades;
+package modelo.entidades;
 
 import modelo.entidades.ConstantesHorario;
 import modelo.entidades.Estudiante;
@@ -9,6 +9,13 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Suite de pruebas unitarias para la clase de dominio Solicitud.
+ *
+ * Esta clase valida de manera exhaustiva las invariantes del modelo, precondiciones
+ * del constructor, encapsulamiento de estado mediante copias defensivas, consistencia
+ * de la máquina de estados y las restricciones dimensionales de las matrices de horarios.
+ */
 @DisplayName("Suite de pruebas unitarias para la entidad Solicitud")
 class SolicitudTest {
 
@@ -16,6 +23,9 @@ class SolicitudTest {
     private boolean[][] horarioValido;
     private Solicitud solicitud;
 
+    /**
+     * Inicializa y configura el entorno común antes de la ejecución de cada caso de prueba.
+     */
     @BeforeEach
     @DisplayName("Arrange común: crea un estudiante, una matriz de horario válida y una solicitud base antes de cada prueba")
     void setUp() {

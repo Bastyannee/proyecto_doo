@@ -1,4 +1,4 @@
-package test.modelo.estrategias;
+package modelo.estrategias;
 
 import modelo.entidades.Estudiante;
 import modelo.entidades.Solicitud;
@@ -13,11 +13,25 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Suite de pruebas unitarias para el componente de estrategia BusquedaAfinidad.
+ *
+ * Esta clase valida el comportamiento del algoritmo de emparejamiento basado en la
+ * afinidad disciplinaria entre la carrera del estudiante y el área declarada por el tutor.
+ * Se verifican de manera exhaustiva las reglas de negocio de normalización de cadenas
+ * (insensibilidad a mayúsculas y minúsculas), el correcto funcionamiento del mapa
+ * heurístico de palabras clave para clasificar facultades, el mecanismo de respaldo (fallback)
+ * cuando una carrera no se encuentra indexada y el control de excepciones ante parámetros nulos.
+ */
 @DisplayName("Suite de pruebas unitarias para la estrategia BusquedaAfinidad")
 class BusquedaAfinidadTest {
 
     private EstrategiaBusqueda estrategia;
 
+    /**
+     * Configura el escenario de ejecución base, instanciando la estrategia bajo
+     * análisis antes de cada caso de prueba aislado.
+     */
     @BeforeEach
     @DisplayName("Arrange común: instancia la estrategia de búsqueda por afinidad antes de cada prueba")
     void setUp() {
@@ -27,7 +41,7 @@ class BusquedaAfinidadTest {
     @Test
     @DisplayName("buscar() empareja a un estudiante de Ingeniería con un tutor de afinidad 'Ciencias Exactas', ignorando mayúsculas/minúsculas")
     void buscar_empareja_estudianteIngenieria_conTutorCienciasExactas_ignorandoMayusculasMinusculas() {
-        // Arrange
+
         Estudiante estudianteIngenieria = new Estudiante(
                 "Juan Ignacio Soto", "Ingeniería Civil Industrial", 2,
                 "juan.soto@mail.com", "Comentario", "assets/fotos/juan.png");
@@ -41,10 +55,8 @@ class BusquedaAfinidadTest {
 
         List<Tutor> tutores = List.of(tutorCienciasExactas);
 
-        // Act
         List<Tutor> resultado = estrategia.buscar(tutores, solicitud);
 
-        // Assert
         assertEquals(1, resultado.size(),
                 "Un estudiante de 'Ingeniería Civil Industrial' debe emparejar con un tutor de afinidad 'Ciencias Exactas', "
                 + "ya que la palabra clave 'ingenier' clasifica la carrera hacia esa categoría.");
@@ -55,8 +67,7 @@ class BusquedaAfinidadTest {
     @Test
     @DisplayName("buscar() empareja mediante fallback una carrera no mapeada con un tutor cuya afinidad declarada coincide textualmente")
     void buscar_empareja_carreraNoMapeada_conTutorDeAfinidadIdenticaViaFallback() {
-        // Arrange: "Arquitectura" no está clasificada por ninguna palabra clave del mapa heurístico,
-        // por lo que la afinidad implícita cae en el mecanismo de respaldo y usa la carrera tal cual.
+
         Estudiante estudianteArquitectura = new Estudiante(
                 "Laura Beatriz Muñoz", "Arquitectura", 4,
                 "laura.munoz@mail.com", "Comentario", "assets/fotos/laura.png");
@@ -70,10 +81,8 @@ class BusquedaAfinidadTest {
 
         List<Tutor> tutores = List.of(tutorArquitectura);
 
-        // Act
         List<Tutor> resultado = estrategia.buscar(tutores, solicitud);
 
-        // Assert
         assertEquals(1, resultado.size(),
                 "Ante una carrera no mapeada heurísticamente ('Arquitectura'), la afinidad implícita debe caer al fallback "
                 + "(usar la carrera misma) y emparejar con un tutor cuya afinidad declarada sea idéntica.");
@@ -84,7 +93,7 @@ class BusquedaAfinidadTest {
     @Test
     @DisplayName("buscar() retorna lista vacía cuando ningún tutor tiene una afinidad compatible con la del estudiante")
     void buscar_retornaListaVacia_cuandoNoHayCoincidenciaDeAfinidad() {
-        // Arrange
+
         Estudiante estudiantePsicologia = new Estudiante(
                 "María José Fernández", "Psicología", 5,
                 "maria.fernandez@mail.com", "Comentario", "assets/fotos/maria.png");
@@ -98,10 +107,8 @@ class BusquedaAfinidadTest {
 
         List<Tutor> tutores = List.of(tutorCienciasExactas);
 
-        // Act
         List<Tutor> resultado = estrategia.buscar(tutores, solicitud);
 
-        // Assert
         assertTrue(resultado.isEmpty(),
                 "No debe existir coincidencia entre la afinidad implícita 'Humanidades' (derivada de 'Psicología') "
                 + "y la afinidad declarada 'Ciencias Exactas' del tutor.");
@@ -110,13 +117,12 @@ class BusquedaAfinidadTest {
     @Test
     @DisplayName("buscar() lanza IllegalArgumentException si la lista de tutores es nula")
     void buscar_lanzaExcepcion_siListaDeTutoresEsNula() {
-        // Arrange
+
         Estudiante estudiante = new Estudiante(
                 "Pedro Pablo González", "Ingeniería Comercial", 3,
                 "pedro.gonzalez@mail.com", "Comentario", "assets/fotos/pedro.png");
         Solicitud solicitud = new Solicitud("SOL-104", "Ayuda", "Comentario", null, estudiante);
 
-        // Act / Assert
         assertThrows(IllegalArgumentException.class, () -> estrategia.buscar(null, solicitud),
                 "Debe lanzarse IllegalArgumentException cuando la lista de tutores recibida es nula.");
     }
@@ -124,13 +130,12 @@ class BusquedaAfinidadTest {
     @Test
     @DisplayName("buscar() lanza IllegalArgumentException si la solicitud es nula")
     void buscar_lanzaExcepcion_siSolicitudEsNula() {
-        // Arrange
+
         Tutor tutor = new Tutor(
                 "Jong Si-yun", "Especialista en Estadística", "Estadística Inferencial",
                 "Ciencias Exactas", "assets/fotos/jong.png");
         List<Tutor> tutores = List.of(tutor);
 
-        // Act / Assert
         assertThrows(IllegalArgumentException.class, () -> estrategia.buscar(tutores, null),
                 "Debe lanzarse IllegalArgumentException cuando la solicitud recibida es nula.");
     }
