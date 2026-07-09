@@ -4,57 +4,28 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 
 /**
- * Representa una solicitud de tutoría que un {@link Estudiante} genera y el
- * administrador registra en el Sistema de Reservas de Clases Particulares.
+ * Representa una solicitud de tutoría que un Estudiante genera y el administrador
+ * registra en el Sistema de Reservas de Clases Particulares.
  *
- * <p>Una {@code Solicitud} encapsula:</p>
- * <ul>
- *   <li>El asunto o materia de apoyo requerida.</li>
- *   <li>Un comentario libre del estudiante con detalles adicionales.</li>
- *   <li>Una matriz {@code boolean[5][6]} que expresa los bloques horarios
- *       de preferencia del estudiante, compatible con la disponibilidad de
- *       {@link Tutor}.</li>
- * </ul>
+ * Una Solicitud encapsula:
+ * - El asunto o materia de apoyo requerida.
+ * - Un comentario descriptivo del estudiante con detalles adicionales.
+ * - Una matriz de booleanos que expresa los bloques horarios de preferencia del alumno,
+ *   coherente con las dimensiones de disponibilidad del Tutor.
  *
- * <p>El administrador utiliza este objeto como entrada del patrón Strategy
- * ({@code BusquedaPorHorario}, {@code BusquedaPorAfinidad}) para encontrar
- * tutores compatibles y, posteriormente, como insumo del patrón Command
- * ({@code ComandoAgendar}) para transformar la solicitud en una
- * {@link Reserva}.</p>
+ * El administrador utiliza este objeto como entrada para encontrar tutores compatibles
+ * mediante estrategias de búsqueda y, posteriormente, para transformarla en una Reserva.
  *
- * <p>Ciclo de vida del estado:</p>
- * <pre>
- *   PENDIENTE ──► CONVERTIDA  (via ComandoAgendar)
- *             └─► ARCHIVADA   (via ComandoArchivar)
- * </pre>
- *
- * <p>Invariantes de clase:</p>
- * <ul>
- *   <li>{@code id}, {@code asunto} y {@code estudiante} nunca son
- *       {@code null}.</li>
- *   <li>{@code horarioDeseado} siempre tiene dimensiones
- *       {@value ConstantesHorario#DIAS} × {@value ConstantesHorario#BLOQUES}.</li>
- *   <li>{@code estado} nunca es {@code null}.</li>
- *   <li>{@code fechaCreacion} es inmutable y refleja el instante de registro.</li>
- * </ul>
- *
- * @author  Bastián
- * @version 1.0
- * @see     Estudiante
- * @see     Reserva
- * @see     ConstantesHorario
+ * Invariantes de la clase:
+ * - El ID, asunto y estudiante nunca pueden ser nulos.
+ * - La matriz horarioDeseado siempre mantiene las dimensiones de ConstantesHorario.
+ * - El estado inicial siempre se inicializa como PENDIENTE.
+ * - La fechaCreacion es inmutable y captura el instante exacto de registro en el sistema.
  */
 public class Solicitud {
 
-    // -------------------------------------------------------------------------
-    // Enumeración de estado
-    // -------------------------------------------------------------------------
-
     /**
-     * Estados posibles durante el ciclo de vida de una {@code Solicitud}.
-     *
-     * <p>La transición de estado la gestiona exclusivamente el administrador
-     * a través de los comandos del controlador.</p>
+     * Estados posibles durante el ciclo de vida de una Solicitud.
      */
     public enum EstadoSolicitud {
 
@@ -66,7 +37,7 @@ public class Solicitud {
 
         /**
          * La solicitud fue descartada por el administrador sin generar una
-         * reserva (p. ej., por incompatibilidad de horarios o falta de tutores
+         * reserva (por ejemplo: por incompatibilidad de horarios o falta de tutores
          * disponibles).
          */
         ARCHIVADA,
@@ -78,14 +49,10 @@ public class Solicitud {
         CONVERTIDA
     }
 
-    // -------------------------------------------------------------------------
-    // Atributos
-    // -------------------------------------------------------------------------
-
     /**
      * Identificador único de la solicitud.
      * Asignado por el administrador o generado por {@code GestorDatos} al
-     * momento del registro.  Inmutable.
+     * momento del registro. Inmutable.
      */
     private final String id;
 
@@ -103,21 +70,13 @@ public class Solicitud {
     private String comentario;
 
     /**
-     * Matriz {@code boolean[5][6]} de bloques horarios deseados por el
-     * estudiante.
-     *
-     * <pre>
-     *   horarioDeseado[dia][bloque] == true  → el estudiante puede en ese slot
-     *   horarioDeseado[dia][bloque] == false → el estudiante NO está disponible
-     * </pre>
-     *
-     * <p>Se compara con {@code Tutor.disponibilidad} en
-     * {@code BusquedaPorHorario} para encontrar coincidencias.</p>
+     * Matriz de disponibilidad horaria donde true indica que el estudiante puede asistir
+     * en ese bloque y dia de la semana. Estructura basada en boolean[DIAS][BLOQUES].
      */
     private boolean[][] horarioDeseado;
 
     /**
-     * Estudiante que origina la solicitud.  Referencia inmutable.
+     * Estudiante que origina la solicitud. Referencia inmutable.
      * Nunca {@code null}.
      */
     private final Estudiante estudiante;
@@ -134,47 +93,31 @@ public class Solicitud {
      */
     private final LocalDateTime fechaCreacion;
 
-    // -------------------------------------------------------------------------
-    // Constructor
-    // -------------------------------------------------------------------------
-
     /**
-     * Crea una nueva {@code Solicitud} en estado {@link EstadoSolicitud#PENDIENTE}.
+     * Crea una nueva Solicitud en estado PENDIENTE con su marca de tiempo actual.
      *
-     * @param id             identificador único; no puede ser {@code null} ni en blanco
-     * @param asunto         asunto de la solicitud; no puede ser {@code null} ni en blanco
-     * @param comentario     comentario del estudiante; {@code null} se normaliza a
-     *                       cadena vacía
-     * @param horarioDeseado matriz {@code boolean[5][6]} con los bloques preferidos;
-     *                       si es {@code null} se crea una matriz de ceros
-     *                       (sin preferencia declarada)
-     * @param estudiante     estudiante que genera la solicitud; no puede ser
-     *                       {@code null}
-     * @throws IllegalArgumentException si {@code id}, {@code asunto} o
-     *                                  {@code estudiante} son inválidos, o si
-     *                                  {@code horarioDeseado} tiene dimensiones
-     *                                  incorrectas
+     * @param id Identificador único; no puede estar vacío ni ser nulo.
+     * @param asunto Tema o materia de consulta; no puede estar vacío ni ser nulo.
+     * @param comentario Detalle de la consulta; si es nulo se normaliza a texto vacío.
+     * @param horarioDeseado Matriz de bloques seleccionados; si es nula se genera vacía.
+     * @param estudiante Estudiante que genera la solicitud.
+     * @throws IllegalArgumentException Si algún campo obligatorio es inválido o la matriz no cumple las dimensiones necesarias.
      */
-    public Solicitud(String id, String asunto, String comentario,
-                     boolean[][] horarioDeseado, Estudiante estudiante) {
+    public Solicitud(String id, String asunto, String comentario, boolean[][] horarioDeseado, Estudiante estudiante) {
 
         validarParametrosObligatorios(id, asunto, estudiante);
         if (horarioDeseado != null) validarDimensionesMatriz(horarioDeseado);
 
-        this.id             = id.strip();
-        this.asunto         = asunto.strip();
-        this.comentario     = (comentario != null) ? comentario.strip() : "";
+        this.id = id.strip();
+        this.asunto = asunto.strip();
+        this.comentario = (comentario != null) ? comentario.strip() : "";
         this.horarioDeseado = (horarioDeseado != null)
                               ? copiarMatriz(horarioDeseado)
                               : new boolean[ConstantesHorario.DIAS][ConstantesHorario.BLOQUES];
-        this.estudiante     = estudiante;
-        this.estado         = EstadoSolicitud.PENDIENTE;
-        this.fechaCreacion  = LocalDateTime.now();
+        this.estudiante = estudiante;
+        this.estado = EstadoSolicitud.PENDIENTE;
+        this.fechaCreacion = LocalDateTime.now();
     }
-
-    // -------------------------------------------------------------------------
-    // Getters
-    // -------------------------------------------------------------------------
 
     /**
      * Retorna el identificador único e inmutable de la solicitud.
@@ -204,26 +147,22 @@ public class Solicitud {
     }
 
     /**
-     * Retorna una <strong>copia defensiva profunda</strong> de la matriz de
-     * horario deseado.
+     * Retorna una copia defensiva profunda de la matriz de horario deseado.
+     * Modificar el arreglo devuelto no altera la estructura interna de la solicitud.
      *
-     * <p>Modificar el arreglo retornado <em>no</em> afecta al estado interno
-     * de la solicitud.  Para actualizar bloques individuales use
-     * {@link #setBloqueSolicitado(int, int, boolean)}.</p>
-     *
-     * @return copia profunda de {@code boolean[5][6]}
+     * @return Una copia de la matriz boolean[DIAS][BLOQUES].
      */
     public boolean[][] getHorarioDeseado() {
         return copiarMatriz(horarioDeseado);
     }
 
     /**
-     * Indica si el estudiante marcó como deseable un bloque horario específico.
+     * Evalúa si un bloque de tiempo y día específico fue seleccionado en la solicitud.
      *
-     * @param dia    índice del día (0 = Lunes … 4 = Viernes)
-     * @param bloque índice del bloque horario (0–5)
-     * @return {@code true} si el estudiante desea clase en ese slot
-     * @throws IllegalArgumentException si los índices están fuera de rango
+     * @param dia Índice del día de la semana (0 a 4).
+     * @param bloque Índice del bloque de horas (0 a 5).
+     * @return true si el bloque se encuentra marcado como disponible.
+     * @throws IllegalArgumentException Si los índices se encuentran fuera de la grilla permitida.
      */
     public boolean isBloqueSolicitado(int dia, int bloque) {
         validarIndices(dia, bloque);
@@ -257,10 +196,6 @@ public class Solicitud {
         return fechaCreacion;
     }
 
-    // -------------------------------------------------------------------------
-    // Setters con validación
-    // -------------------------------------------------------------------------
-
     /**
      * Actualiza el asunto de la solicitud.
      *
@@ -283,12 +218,10 @@ public class Solicitud {
     }
 
     /**
-     * Reemplaza toda la matriz de horario deseado por una copia defensiva de
-     * la proporcionada.
+     * Reemplaza por completo la matriz de horario utilizando una copia defensiva profunda.
      *
-     * @param horarioDeseado nueva matriz {@code boolean[5][6]}; no puede ser
-     *                       {@code null} ni tener dimensiones incorrectas
-     * @throws IllegalArgumentException si la matriz es inválida
+     * @param horarioDeseado Nueva matriz de horarios semanales.
+     * @throws IllegalArgumentException Si la matriz es nula o posee dimensiones incorrectas.
      */
     public void setHorarioDeseado(boolean[][] horarioDeseado) {
         validarDimensionesMatriz(horarioDeseado);
@@ -298,8 +231,8 @@ public class Solicitud {
     /**
      * Modifica la preferencia de un bloque horario específico.
      *
-     * @param dia        índice del día (0–4)
-     * @param bloque     índice del bloque (0–5)
+     * @param dia índice del día (0–4)
+     * @param bloque índice del bloque (0–5)
      * @param solicitado {@code true} para marcar el bloque como deseado
      * @throws IllegalArgumentException si los índices están fuera de rango
      */
@@ -309,13 +242,10 @@ public class Solicitud {
     }
 
     /**
-     * Actualiza el estado de la solicitud en su ciclo de vida.
+     * Modifica el estado del ciclo de vida de la solicitud.
      *
-     * <p>Normalmente esta operación la realiza el controlador a través de los
-     * comandos {@code ComandoAgendar} y {@code ComandoArchivar}.</p>
-     *
-     * @param estado nuevo estado; no puede ser {@code null}
-     * @throws IllegalArgumentException si {@code estado} es {@code null}
+     * @param estado Nuevo estado a registrar.
+     * @throws IllegalArgumentException Si el estado es nulo.
      */
     public void setEstado(EstadoSolicitud estado) {
         if (estado == null)
@@ -323,25 +253,19 @@ public class Solicitud {
         this.estado = estado;
     }
 
-    // -------------------------------------------------------------------------
-    // Métodos de utilidad
-    // -------------------------------------------------------------------------
-
     /**
-     * Indica si la solicitud aún puede ser procesada por el administrador.
+     * Evalúa si la solicitud se encuentra pendiente de procesamiento.
      *
-     * @return {@code true} si el estado es {@link EstadoSolicitud#PENDIENTE}
+     * @return true si el estado actual es PENDIENTE.
      */
     public boolean isPendiente() {
         return estado == EstadoSolicitud.PENDIENTE;
     }
 
     /**
-     * Cuenta el número de bloques horarios que el estudiante marcó como
-     * deseados.
+     * Obtiene el conteo total de todos los bloques marcados como disponibles por el estudiante.
      *
-     * @return número de slots solicitados (entre 0 y
-     *         {@value ConstantesHorario#DIAS} × {@value ConstantesHorario#BLOQUES})
+     * @return Cantidad total de celdas en verdadero en la matriz de horario.
      */
     public int contarBloquesDeseados() {
         int count = 0;
@@ -350,10 +274,6 @@ public class Solicitud {
                 if (bloque) count++;
         return count;
     }
-
-    // -------------------------------------------------------------------------
-    // Métodos auxiliares privados
-    // -------------------------------------------------------------------------
 
     /**
      * Valida los parámetros obligatorios del constructor.
@@ -384,7 +304,7 @@ public class Solicitud {
     }
 
     /**
-     * Valida las dimensiones de la matriz recibida.
+     * Valida que la estructura bidimensional cumpla con la cantidad de filas y columnas requeridas.
      */
     private static void validarDimensionesMatriz(boolean[][] m) {
         if (m == null)
@@ -411,10 +331,6 @@ public class Solicitud {
             System.arraycopy(original[i], 0, copia[i], 0, ConstantesHorario.BLOQUES);
         return copia;
     }
-
-    // -------------------------------------------------------------------------
-    // Sobreescritura de Object
-    // -------------------------------------------------------------------------
 
     /**
      * Dos instancias de {@code Solicitud} son iguales si comparten el mismo

@@ -13,58 +13,84 @@ import java.awt.*;
 import java.util.Optional;
 
 /**
- * Muestra el detalle completo de una solicitud seleccionada.
-
- * POSICION EN EL FLUJO:
- * Bienvenida → [Ver detalle] → DetalleSolicitud → [Buscar tutor] → Busqueda
-
- * Este panel es el paso intermedio obligatorio. Al cargarse, registra
- * la solicitud activa en Navegador para que PanelCalendario pueda
- * usarla al crear la Reserva con el estudiante correcto.
+ * Panel de visualización pormenorizada encargado de exponer los detalles de una solicitud específica.
+ *
+ * Esta pantalla actúa como el nexo operativo e intermediario obligatorio dentro del flujo principal
+ * de la aplicación, cuya secuencia de transiciones se estructura de la siguiente manera:
+ * Bienvenida -> [Ver detalle] -> DetalleSolicitud -> [Buscar tutor] -> Busqueda
+ *
+ * Al cargarse mediante los despachadores del sistema, la clase aísla los datos del estudiante y
+ * renderiza una matriz estática en modo de solo lectura que refleja los bloques horarios en los
+ * cuales el alumno manifestó tener disponibilidad o interés de asistencia.
+ *
+ * Esta vista cumple el rol crítico de asegurar la persistencia de la solicitud activa dentro del
+ * mediador de pantallas (Navegador), permitiendo que los paneles subsecuentes del flujo (como el
+ * calendario de asignación) recuperen la información del estudiante correcto al momento de consolidar
+ * los comandos de reserva.
  */
 public class PanelDetalleSoli extends JPanel {
 
+    /** Controlador centralizado de rutas de la interfaz encargado de orquestar los cambios de pantallas. */
     private final Navegador navegador;
-    private final JLabel    labelNombre;
-    private final JLabel    labelCarrera;
-    private final JLabel    labelCorreo;
-    private final JLabel    labelAsunto;
-    private final JLabel    labelComentario;
-    private final JLabel    labelEstadoFlujo;
+    /** Componente visual destinado a mostrar el nombre completo del estudiante solicitante. */
+    private final JLabel labelNombre;
+    /** Componente visual que detalla la carrera de origen y el semestre académico vigente del alumno. */
+    private final JLabel labelCarrera;
+    /** Componente que expone la dirección de correo institucional del estudiante. */
+    private final JLabel labelCorreo;
+    /** Etiqueta que resume el núcleo temático o materia requerida en la tutoría. */
+    private final JLabel labelAsunto;
+    /** Bloque de texto descriptivo reservado para las aclaraciones u observaciones adjuntas del alumno. */
+    private final JLabel labelComentario;
+    /** Indicador de estado dinámico que sitúa al administrador reflejando el asunto en proceso dentro del encabezado. */
+    private final JLabel labelEstadoFlujo;
+    /** Matriz bidimensional de etiquetas Swing utilizadas para construir los cuadrantes de la grilla horaria. */
     private final JLabel[][] celdas;
-    private final JPanel    grillaPanel;
-    private Solicitud       solicitudActual;
+    /** Subpanel intermedio estructurado con un GridLayout que confina las celdas del esquema horario semanal. */
+    private final JPanel grillaPanel;
+    /** Instancia de la entidad solicitud bajo examen en el panel. */
+    private Solicitud solicitudActual;
 
+    /** Rótulos de texto de los días laborales graficados en las columnas de la agenda. */
     private static final String[] DIAS = {"Lun", "Mar", "Mié", "Jue", "Vie"};
+    /** Etiquetas con las horas de apertura correspondientes a las filas horarias del sistema. */
     private static final String[] BLOQUES = {
             "08:00", "09:30", "11:00", "12:30", "14:00", "15:30"
     };
 
+    /**
+     * Construye un nuevo panel de detalle inicializando los contenedores de datos de texto,
+     * estructurando las tarjetas de información y preparando los bloques geométricos de la grilla.
+     *
+     * @param navegador Instancia global del despachador de vistas del sistema.
+     */
     public PanelDetalleSoli(Navegador navegador) {
-        this.navegador       = navegador;
-        this.labelNombre     = new JLabel();
-        this.labelCarrera    = new JLabel();
-        this.labelCorreo     = new JLabel();
-        this.labelAsunto     = new JLabel();
+        this.navegador = navegador;
+        this.labelNombre = new JLabel();
+        this.labelCarrera = new JLabel();
+        this.labelCorreo = new JLabel();
+        this.labelAsunto = new JLabel();
         this.labelComentario = new JLabel();
         this.labelEstadoFlujo = new JLabel();
-        this.celdas          = new JLabel[ConstantesHorario.DIAS][ConstantesHorario.BLOQUES];
-        this.grillaPanel     = new JPanel();
+        this.celdas = new JLabel[ConstantesHorario.DIAS][ConstantesHorario.BLOQUES];
+        this.grillaPanel = new JPanel();
 
         setLayout(new BorderLayout());
         setBackground(Tema.FONDO);
         add(crearEncabezado(), BorderLayout.NORTH);
-        add(crearCuerpo(),     BorderLayout.CENTER);
-        add(crearBotones(),    BorderLayout.SOUTH);
+        add(crearCuerpo(), BorderLayout.CENTER);
+        add(crearBotones(), BorderLayout.SOUTH);
     }
 
-    // ── API pública ──────────────────────────────────────────
-
     /**
-     * Carga los datos de la solicitud seleccionada.
-     * Llamado por Navegador.mostrarDetalleSolicitud() antes de navegar
-     * a este panel — garantiza que solicitudActual nunca sea null
-     * cuando el panel es visible.
+     * Sincroniza y recompone los controles del panel localizando la solicitud solicitada en el
+     * GestorDatos mediante su identificador único.
+     *
+     * Este método es invocado externamente por el Navegador antes de conmutar la visibilidad de la
+     * pantalla, garantizando que las referencias a las entidades internas se encuentren debidamente
+     * pobladas y evitando excepciones de puntero nulo en tiempo de ejecución.
+     *
+     * @param solicitudId Cadena técnica representativa del identificador de la solicitud.
      */
     public void cargarSolicitud(String solicitudId) {
         Optional<Solicitud> resultado =
@@ -74,7 +100,6 @@ public class PanelDetalleSoli extends JPanel {
         this.solicitudActual = resultado.get();
         var e = solicitudActual.getEstudiante();
 
-        // Datos del estudiante
         labelNombre.setText(e.getNombre());
         labelCarrera.setText(e.getCarrera() + " — Semestre " + e.getSemestre());
         labelCorreo.setText(e.getCorreo());
@@ -84,10 +109,8 @@ public class PanelDetalleSoli extends JPanel {
                         ? "Sin comentarios adicionales."
                         : solicitudActual.getComentario()) + "</i></html>");
 
-        // Indicador de flujo
         labelEstadoFlujo.setText("Solicitud activa: \"" + solicitudActual.getAsunto() + "\"");
 
-        // Grilla de horarios deseados
         boolean[][] horario = solicitudActual.getHorarioDeseado();
         for (int d = 0; d < ConstantesHorario.DIAS; d++) {
             for (int b = 0; b < ConstantesHorario.BLOQUES; b++) {
@@ -101,10 +124,19 @@ public class PanelDetalleSoli extends JPanel {
         repaint();
     }
 
+    /**
+     * Provee acceso a la instancia de la solicitud que se encuentra actualmente en foco.
+     *
+     * @return El objeto de la entidad Solicitud vinculada.
+     */
     public Solicitud getSolicitudActual() { return solicitudActual; }
 
-    // ── Construcción UI ──────────────────────────────────────
-
+    /**
+     * Configura la franja superior (Zona Norte) del panel maquetando los títulos corporativos
+     * y los rótulos pasivos de seguimiento de la sesión.
+     *
+     * @return El subpanel JPanel formateado con los colores de identidad del encabezado.
+     */
     private JPanel crearEncabezado() {
         JPanel p = new JPanel(new BorderLayout());
         p.setBackground(Tema.PRIMARIO);
@@ -129,6 +161,12 @@ public class PanelDetalleSoli extends JPanel {
         return p;
     }
 
+    /**
+     * Modela la distribución espacial intermedia (Zona Centro) dividiendo simétricamente el
+     * lienzo en dos secciones equivalentes para alojar las tarjetas del perfil y del horario.
+     *
+     * @return Contenedor intermedio provisto de rejillas proporcionales.
+     */
     private JPanel crearCuerpo() {
         JPanel p = new JPanel(new GridLayout(1, 2, Tema.PADDING, 0));
         p.setBackground(Tema.FONDO);
@@ -138,6 +176,12 @@ public class PanelDetalleSoli extends JPanel {
         return p;
     }
 
+    /**
+     * Compila la tarjeta visual izquierda reuniendo los campos de texto estructurados del
+     * alumno y sus observaciones adicionales.
+     *
+     * @return El JPanel de la tarjeta estallado en formato vertical.
+     */
     private JPanel crearTarjetaEstudiante() {
         JPanel p = new JPanel();
         p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
@@ -146,10 +190,10 @@ public class PanelDetalleSoli extends JPanel {
                 new LineBorder(Tema.BORDE, 1, true),
                 new EmptyBorder(Tema.PADDING, Tema.PADDING, Tema.PADDING, Tema.PADDING)));
 
-        agregarCampo(p, "Estudiante",  labelNombre);
-        agregarCampo(p, "Carrera",     labelCarrera);
-        agregarCampo(p, "Correo",      labelCorreo);
-        agregarCampo(p, "Asunto",      labelAsunto);
+        agregarCampo(p, "Estudiante", labelNombre);
+        agregarCampo(p, "Carrera", labelCarrera);
+        agregarCampo(p, "Correo", labelCorreo);
+        agregarCampo(p, "Asunto", labelAsunto);
         p.add(Box.createVerticalStrut(8));
         labelComentario.setFont(Tema.FUENTE_CUERPO);
         labelComentario.setForeground(Tema.TEXTO_SECUNDARIO);
@@ -158,6 +202,14 @@ public class PanelDetalleSoli extends JPanel {
         return p;
     }
 
+    /**
+     * Rutina utilitaria encargada de estilar e insertar pares jerárquicos de etiquetas de control
+     * e información dentro de un contenedor.
+     *
+     * @param p Contenedor de destino.
+     * @param etiqueta Texto explicativo superior que define la naturaleza del campo.
+     * @param valor Label dinámico que contiene el valor del atributo a desplegar.
+     */
     private void agregarCampo(JPanel p, String etiqueta, JLabel valor) {
         JLabel lbl = new JLabel(etiqueta.toUpperCase());
         lbl.setFont(Tema.FUENTE_PEQUENA);
@@ -169,6 +221,12 @@ public class PanelDetalleSoli extends JPanel {
         p.add(Box.createVerticalStrut(10));
     }
 
+    /**
+     * Ensambla la tarjeta visual derecha unificando los títulos de sección con la grilla de
+     * celdas de disponibilidad solicitadas.
+     *
+     * @return El subpanel estructurado de la agenda del estudiante.
+     */
     private JPanel crearTarjetaHorario() {
         JPanel p = new JPanel(new BorderLayout(0, Tema.PADDING_PEQUEÑO));
         p.setBackground(Tema.FONDO_TARJETA);
@@ -182,15 +240,19 @@ public class PanelDetalleSoli extends JPanel {
 
         grillaPanel.setLayout(new GridLayout(
                 ConstantesHorario.BLOQUES + 1,
-                ConstantesHorario.DIAS   + 1, 2, 2));
+                ConstantesHorario.DIAS + 1, 2, 2));
         grillaPanel.setBackground(Tema.FONDO);
         construirGrilla();
 
-        p.add(titulo,      BorderLayout.NORTH);
+        p.add(titulo, BorderLayout.NORTH);
         p.add(grillaPanel, BorderLayout.CENTER);
         return p;
     }
 
+    /**
+     * Construye secuencialmente las filas y columnas de la agenda acoplando los encabezados
+     * textuales con los labels internos indexados en la matriz.
+     */
     private void construirGrilla() {
         grillaPanel.add(celdaEncabezado(""));
         for (String d : DIAS)
@@ -210,6 +272,13 @@ public class PanelDetalleSoli extends JPanel {
         }
     }
 
+    /**
+     * Modela una etiqueta de control endurecida para cumplir la función de celda de rotulado
+     * perimetral en la grilla.
+     *
+     * @param texto Cadena de caracteres que se imprimirá en el foco de la celda guía.
+     * @return El componente JLabel estilizado con la tipografía de cabeceras de tablas.
+     */
     private JLabel celdaEncabezado(String texto) {
         JLabel l = new JLabel(texto, SwingConstants.CENTER);
         l.setOpaque(true);
@@ -220,6 +289,12 @@ public class PanelDetalleSoli extends JPanel {
         return l;
     }
 
+    /**
+     * Estructura la barra de control inferior (Zona Sur) disponiendo las rutas de escape y los
+     * disparadores del módulo de emparejamiento de tutores.
+     *
+     * @return El panel horizontal de botones alineado al extremo derecho de la visual.
+     */
     private JPanel crearBotones() {
         JPanel p = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         p.setBackground(Tema.FONDO);
@@ -245,6 +320,14 @@ public class PanelDetalleSoli extends JPanel {
         return p;
     }
 
+    /**
+     * Fabrica un botón gráfico parametrizado inyectándole fuentes tipográficas, colores de fondo
+     * e instrucciones reactivas para el puntero del ratón.
+     *
+     * @param texto Cadena informativa frontal del botón.
+     * @param fondo Color cromático base del componente.
+     * @return El componente JButton listo para recibir disparadores de eventos.
+     */
     private JButton crearBoton(String texto, Color fondo) {
         JButton b = new JButton(texto);
         b.setFont(Tema.FUENTE_BOTON);

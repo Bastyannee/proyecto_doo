@@ -4,45 +4,25 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Representa a un tutor registrado en el Sistema de Reservas de Clases
- * Particulares.
+ * Representa a un tutor registrado en el Sistema de Reservas de Clases Particulares.
  *
- * <p>Un {@code Tutor} posee un horario de disponibilidad semanal modelado como
- * una matriz {@code boolean[}{@value ConstantesHorario#DIAS}{@code ]
- * [}{@value ConstantesHorario#BLOQUES}{@code ]}, donde:</p>
- * <ul>
- *   <li><b>Filas (0–4):</b> días de la semana (Lunes a Viernes).</li>
- *   <li><b>Columnas (0–5):</b> bloques horarios del día
- *       (08:00–09:30 hasta 16:00–17:30).</li>
- *   <li>{@code true} = tutor disponible en ese bloque.</li>
- *   <li>{@code false} = tutor no disponible o ya asignado.</li>
- * </ul>
+ * Un Tutor posee un horario de disponibilidad semanal modelado como una matriz
+ * bidimensional de booleanos, donde las filas representan los días de la semana
+ * (Lunes a Viernes) y las columnas corresponden a los bloques horarios del día.
+ * Un valor verdadero indica disponibilidad en ese slot, mientras que falso significa
+ * que no está disponible o ya fue asignado.
  *
- * <p>La clase aplica <em>copia defensiva</em> en cada lectura y escritura de
- * la matriz para preservar el principio de encapsulamiento; la vista y el
- * controlador nunca obtienen una referencia directa al arreglo interno.</p>
+ * La clase aplica copia defensiva profunda en cada lectura y escritura de la matriz
+ * para asegurar el encapsulamiento del estado interno frente a modificaciones externas.
  *
- * <p>Invariantes de clase:</p>
- * <ul>
- *   <li>{@code nombre} y {@code materia} nunca son {@code null} ni en blanco.</li>
- *   <li>{@code disponibilidad} nunca es {@code null} y siempre mide
- *       {@value ConstantesHorario#DIAS} × {@value ConstantesHorario#BLOQUES}.</li>
- *   <li>{@code maxEstudiantes} siempre es mayor a 0.</li>
- *   <li>{@code tarifa} siempre es mayor o igual a 0.</li>
- *   <li>{@code id} es inmutable durante toda la vida del objeto.</li>
- * </ul>
- *
- * @author  Bastián
- * @version 1.0
- * @see     ConstantesHorario
- * @see     Reserva
- * @see     Solicitud
+ * Invariantes de la clase:
+ * - El nombre y la materia nunca pueden ser nulos ni estar vacíos.
+ * - La matriz de disponibilidad siempre mantiene las dimensiones de ConstantesHorario.
+ * - La capacidad máxima de estudiantes debe ser estrictamente mayor a cero.
+ * - La tarifa por hora debe ser mayor o igual a cero.
+ * - El ID único es inmutable durante todo el ciclo de vida del objeto.
  */
 public class Tutor {
-
-    // -------------------------------------------------------------------------
-    // Constantes de dominio
-    // -------------------------------------------------------------------------
 
     /**
      * Capacidad máxima de estudiantes por defecto cuando el administrador no
@@ -53,17 +33,13 @@ public class Tutor {
     /** Tarifa mínima permitida (sin cargo). */
     public static final double TARIFA_MINIMA = 0.0;
 
-    // -------------------------------------------------------------------------
-    // Atributos
-    // -------------------------------------------------------------------------
-
     /**
      * Identificador único del tutor, generado automáticamente como UUID
      * en la construcción. Inmutable.
      */
     private final String id;
 
-    /** Nombre completo del tutor (p. ej., "Ana María López"). */
+    /** Nombre completo del tutor */
     private String nombre;
 
     /**
@@ -88,95 +64,70 @@ public class Tutor {
     private String afinidad;
 
     /**
-     * Ruta relativa o absoluta al archivo de imagen de perfil del tutor
-     * (p. ej., {@code "assets/fotos/ana_lopez.png"}).
-     * Puede ser {@code null} si no se ha asignado foto.
+     * Ruta del archivo correspondiente a la foto de perfil del tutor. Puede ser nula.
      */
     private String fotoPath;
 
     /**
-     * Matriz de disponibilidad semanal del tutor.
-     *
-     * <pre>
-     *   disponibilidad[dia][bloque] == true  →  disponible
-     *   disponibilidad[dia][bloque] == false →  no disponible
-     * </pre>
-     *
-     * <p>El acceso externo se realiza siempre mediante copias defensivas.</p>
+     * Matriz de disponibilidad semanal donde true representa un bloque libre para agendar.
      */
     private boolean[][] disponibilidad;
 
     /**
      * Número máximo de estudiantes que el tutor puede atender simultáneamente
-     * en su materia.  Debe ser mayor a 0.
+     * en su materia. Debe ser mayor a 0.
      */
     private int maxEstudiantes;
 
     /**
-     * Tarifa por hora de tutoría expresada en la moneda local (CLP por defecto).
+     * Tarifa por hora de tutoría expresada en la moneda local (CLP).
      * Debe ser mayor o igual a {@value #TARIFA_MINIMA}.
      */
     private double tarifa;
 
-    // -------------------------------------------------------------------------
-    // Constructores
-    // -------------------------------------------------------------------------
-
     /**
-     * Crea un {@code Tutor} con todos sus atributos explícitamente definidos.
+     * Crea una instancia de Tutor con todos sus atributos explícitamente definidos.
      *
-     * @param nombre         nombre completo; no puede ser {@code null} ni en blanco
-     * @param descripcion    descripción/especialidad; no puede ser {@code null}
-     * @param materia        materia que imparte; no puede ser {@code null} ni en blanco
-     * @param afinidad       área de afinidad para búsquedas; puede ser {@code null}
-     * @param fotoPath       ruta al archivo de imagen; puede ser {@code null}
-     * @param disponibilidad matriz {@code boolean[5][6]} de disponibilidad;
-     *                       si es {@code null} se genera una matriz completamente
-     *                       libre (todos {@code true})
-     * @param maxEstudiantes capacidad máxima; debe ser mayor a 0
-     * @param tarifa         tarifa por hora; debe ser ≥ {@value #TARIFA_MINIMA}
-     * @throws IllegalArgumentException si algún parámetro obligatorio es inválido
+     * @param nombre Nombre completo; no puede ser nulo ni estar en blanco.
+     * @param descripcion Perfil o especialidad; no puede ser nula.
+     * @param materia Asignatura principal; no puede ser nula ni estar en blanco.
+     * @param afinidad Área de afinidad; si es nula se normaliza a texto vacío.
+     * @param fotoPath Ruta de la imagen de perfil; puede ser nula.
+     * @param disponibilidad Matriz de disponibilidad semanal; si es nula se genera libre por defecto.
+     * @param maxEstudiantes Capacidad máxima de alumnos; debe ser mayor a 0.
+     * @param tarifa Tarifa horaria; debe ser mayor o igual a la tarifa mínima.
+     * @throws IllegalArgumentException Si alguno de los parámetros obligatorios no cumple con las restricciones de la clase.
      */
-    public Tutor(String nombre, String descripcion, String materia,
-                 String afinidad, String fotoPath,
-                 boolean[][] disponibilidad, int maxEstudiantes, double tarifa) {
+    public Tutor(String nombre, String descripcion, String materia, String afinidad, String fotoPath, boolean[][] disponibilidad, int maxEstudiantes, double tarifa) {
 
         validarCamposObligatorios(nombre, descripcion, materia, maxEstudiantes, tarifa);
 
-        this.id             = UUID.randomUUID().toString();
-        this.nombre         = nombre.strip();
-        this.descripcion    = descripcion.strip();
-        this.materia        = materia.strip();
-        this.afinidad       = (afinidad != null) ? afinidad.strip() : "";
-        this.fotoPath       = fotoPath;
+        this.id = UUID.randomUUID().toString();
+        this.nombre = nombre.strip();
+        this.descripcion = descripcion.strip();
+        this.materia = materia.strip();
+        this.afinidad = (afinidad != null) ? afinidad.strip() : "";
+        this.fotoPath = fotoPath;
         this.disponibilidad = (disponibilidad != null)
                               ? copiarMatriz(disponibilidad)
                               : matrizLibre();
         this.maxEstudiantes = maxEstudiantes;
-        this.tarifa         = tarifa;
+        this.tarifa = tarifa;
     }
 
     /**
-     * Constructor de conveniencia con disponibilidad totalmente libre y valores
-     * por defecto para capacidad ({@value #MAX_ESTUDIANTES_DEFAULT}) y tarifa (0).
+     * Constructor simplificado que inicializa la disponibilidad completamente libre,
+     * la capacidad por defecto y la tarifa mínima permitida.
      *
-     * <p>Ideal para poblar rápidamente el {@code GestorDatos} con Mock Data.</p>
-     *
-     * @param nombre      nombre completo; no puede ser {@code null} ni en blanco
-     * @param descripcion descripción/especialidad; no puede ser {@code null}
-     * @param materia     materia que imparte; no puede ser {@code null} ni en blanco
-     * @param afinidad    área de afinidad; puede ser {@code null}
-     * @param fotoPath    ruta al archivo de imagen; puede ser {@code null}
+     * @param nombre Nombre completo; no puede ser nulo ni estar en blanco.
+     * @param descripcion Perfil o especialidad; no puede ser nula.
+     * @param materia Asignatura principal; no puede ser nula ni estar en blanco.
+     * @param afinidad Área de afinidad académica; puede ser nula.
+     * @param fotoPath Ruta de la imagen de perfil; puede ser nula.
      */
-    public Tutor(String nombre, String descripcion, String materia,
-                 String afinidad, String fotoPath) {
-        this(nombre, descripcion, materia, afinidad, fotoPath,
-             null, MAX_ESTUDIANTES_DEFAULT, TARIFA_MINIMA);
+    public Tutor(String nombre, String descripcion, String materia, String afinidad, String fotoPath) {
+        this(nombre, descripcion, materia, afinidad, fotoPath, null, MAX_ESTUDIANTES_DEFAULT, TARIFA_MINIMA);
     }
-
-    // -------------------------------------------------------------------------
-    // Getters
-    // -------------------------------------------------------------------------
 
     /**
      * Retorna el identificador único e inmutable del tutor.
@@ -235,26 +186,22 @@ public class Tutor {
     }
 
     /**
-     * Retorna una <strong>copia defensiva profunda</strong> de la matriz de
-     * disponibilidad semanal.
+     * Retorna una copia defensiva profunda de la matriz de disponibilidad.
+     * Modificar el arreglo devuelto no altera la agenda interna del tutor.
      *
-     * <p>Modificar el arreglo retornado <em>no</em> altera el estado interno
-     * del tutor.  Para modificar bloques individuales use
-     * {@link #setDisponibilidadBloque(int, int, boolean)}.</p>
-     *
-     * @return copia profunda de {@code boolean[5][6]}
+     * @return Copia independiente de la estructura boolean[DIAS][BLOQUES].
      */
     public boolean[][] getDisponibilidad() {
         return copiarMatriz(disponibilidad);
     }
 
     /**
-     * Consulta la disponibilidad en un bloque específico de la semana.
+     * Consulta el estado de disponibilidad en un bloque y día determinados.
      *
-     * @param dia    índice del día (0 = Lunes … 4 = Viernes)
-     * @param bloque índice del bloque horario (0–5)
-     * @return {@code true} si el tutor está disponible en ese slot
-     * @throws IllegalArgumentException si los índices están fuera de rango
+     * @param dia Índice del día de la semana (0 a 4).
+     * @param bloque Índice del bloque horario del día (0 a 5).
+     * @return true si el tutor se encuentra disponible en ese espacio.
+     * @throws IllegalArgumentException Si los índices se encuentran fuera de los rangos de la grilla.
      */
     public boolean isDisponible(int dia, int bloque) {
         validarIndices(dia, bloque);
@@ -279,15 +226,11 @@ public class Tutor {
         return tarifa;
     }
 
-    // -------------------------------------------------------------------------
-    // Setters con validación
-    // -------------------------------------------------------------------------
-
     /**
      * Actualiza el nombre completo del tutor.
      *
-     * @param nombre nuevo nombre; no puede ser {@code null} ni en blanco
-     * @throws IllegalArgumentException si {@code nombre} es inválido
+     * @param nombre Nuevo nombre; no puede ser nulo ni estar en blanco.
+     * @throws IllegalArgumentException Si el nombre provisto es inválido.
      */
     public void setNombre(String nombre) {
         if (nombre == null || nombre.isBlank())
@@ -296,10 +239,10 @@ public class Tutor {
     }
 
     /**
-     * Actualiza la descripción/especialidad del tutor.
+     * Actualiza la descripción del perfil del tutor.
      *
-     * @param descripcion nueva descripción; no puede ser {@code null}
-     * @throws IllegalArgumentException si {@code descripcion} es {@code null}
+     * @param descripcion Nueva descripción; no puede ser nula.
+     * @throws IllegalArgumentException Si la descripción recibida es nula.
      */
     public void setDescripcion(String descripcion) {
         if (descripcion == null)
@@ -322,7 +265,7 @@ public class Tutor {
     /**
      * Actualiza el área de afinidad del tutor.
      *
-     * @param afinidad nueva afinidad; {@code null} se normaliza a cadena vacía
+     * @param afinidad nueva afinidad; si es nula se normaliza a cadena vacía
      */
     public void setAfinidad(String afinidad) {
         this.afinidad = (afinidad != null) ? afinidad.strip() : "";
@@ -338,15 +281,10 @@ public class Tutor {
     }
 
     /**
-     * Reemplaza toda la matriz de disponibilidad por una <em>copia defensiva</em>
-     * de la proporcionada.
+     * Reemplaza la matriz de disponibilidad completa por medio de una copia defensiva profunda.
      *
-     * @param disponibilidad nueva matriz {@code boolean[5][6]}; no puede ser
-     *                       {@code null} ni tener dimensiones incorrectas
-     * @throws IllegalArgumentException si la matriz es {@code null} o tiene
-     *                                  dimensiones distintas de
-     *                                  {@value ConstantesHorario#DIAS} ×
-     *                                  {@value ConstantesHorario#BLOQUES}
+     * @param disponibilidad Nueva matriz de disponibilidad semanal.
+     * @throws IllegalArgumentException Si la matriz provista es nula o cuenta con dimensiones erróneas.
      */
     public void setDisponibilidad(boolean[][] disponibilidad) {
         validarDimensionesMatriz(disponibilidad);
@@ -354,16 +292,12 @@ public class Tutor {
     }
 
     /**
-     * Modifica la disponibilidad de un bloque horario específico.
+     * Modifica de manera individual el estado de disponibilidad de un bloque específico.
      *
-     * <p>Este método es el mecanismo preferido para que el administrador
-     * actualice la agenda del tutor sin exponer la matriz completa.</p>
-     *
-     * @param dia        índice del día (0 = Lunes … 4 = Viernes)
-     * @param bloque     índice del bloque horario (0–5)
-     * @param disponible {@code true} para marcar el bloque como disponible;
-     *                   {@code false} para bloquearlo
-     * @throws IllegalArgumentException si los índices están fuera de rango
+     * @param dia Índice del día de la semana (0 a 4).
+     * @param bloque Índice del bloque horario (0 a 5).
+     * @param disponible true para habilitar el bloque, false para deshabilitarlo o reservarlo.
+     * @throws IllegalArgumentException Si los índices proporcionados exceden los límites de la grilla.
      */
     public void setDisponibilidadBloque(int dia, int bloque, boolean disponible) {
         validarIndices(dia, bloque);
@@ -395,15 +329,10 @@ public class Tutor {
         this.tarifa = tarifa;
     }
 
-    // -------------------------------------------------------------------------
-    // Métodos de utilidad
-    // -------------------------------------------------------------------------
-
     /**
-     * Cuenta el total de bloques horarios disponibles en la semana actual.
+     * Cuantifica el número total de bloques marcados como disponibles en la semana.
      *
-     * @return número de slots marcados como {@code true} (entre 0 y
-     *         {@value ConstantesHorario#DIAS} × {@value ConstantesHorario#BLOQUES})
+     * @return Total de celdas en verdadero dentro de la matriz de horarios.
      */
     public int contarBloquesDisponibles() {
         int count = 0;
@@ -414,24 +343,18 @@ public class Tutor {
     }
 
     /**
-     * Indica si el tutor tiene al menos un bloque libre en la semana.
+     * Evalúa si el tutor cuenta con al menos un bloque de tiempo disponible en su agenda.
      *
-     * @return {@code true} si {@link #contarBloquesDisponibles()} > 0
+     * @return true si el conteo de bloques disponibles es mayor a cero.
      */
     public boolean tieneDisponibilidad() {
         return contarBloquesDisponibles() > 0;
     }
 
-    // -------------------------------------------------------------------------
-    // Métodos auxiliares privados
-    // -------------------------------------------------------------------------
-
     /**
-     * Valida los campos obligatorios del tutor en la construcción.
+     * Valida las restricciones fundamentales de los campos requeridos en la construcción.
      */
-    private static void validarCamposObligatorios(String nombre, String descripcion,
-                                                   String materia, int maxEstudiantes,
-                                                   double tarifa) {
+    private static void validarCamposObligatorios(String nombre, String descripcion, String materia, int maxEstudiantes, double tarifa) {
         if (nombre == null || nombre.isBlank())
             throw new IllegalArgumentException("El nombre del tutor es obligatorio.");
         if (descripcion == null)
@@ -445,8 +368,7 @@ public class Tutor {
     }
 
     /**
-     * Valida que los índices de día y bloque estén dentro del rango definido
-     * por {@link ConstantesHorario}.
+     * Comprueba que los índices suministrados correspondan a los límites de días y bloques del sistema.
      */
     private static void validarIndices(int dia, int bloque) {
         if (dia < 0 || dia >= ConstantesHorario.DIAS)
@@ -481,9 +403,9 @@ public class Tutor {
     /**
      * Realiza una copia profunda de una matriz {@code boolean[5][6]}.
      *
-     * <p>Se usa {@link System#arraycopy} por su eficiencia con arreglos
+     * Se usa {@link System#arraycopy} por su eficiencia con arreglos
      * primitivos, evitando la copia superficial que realizaría {@code clone()}
-     * sobre la dimensión exterior.</p>
+     * sobre la dimensión exterior.
      *
      * @param original matriz fuente; debe tener las dimensiones correctas
      * @return nueva instancia de matriz con los mismos valores
@@ -508,13 +430,8 @@ public class Tutor {
         return m;
     }
 
-    // -------------------------------------------------------------------------
-    // Sobreescritura de Object
-    // -------------------------------------------------------------------------
-
     /**
-     * Dos instancias de {@code Tutor} son iguales si comparten el mismo
-     * {@code id}.
+     * Compara la igualdad de dos tutores basándose de manera única en su ID inmutable.
      *
      * @param obj objeto a comparar
      * @return {@code true} si ambos representan al mismo tutor

@@ -9,67 +9,42 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Punto de acceso central y único a los datos del Sistema de Reservas de
- * Clases Particulares.
+ * Punto de acceso central y único a los datos del Sistema de Reservas de Clases Particulares.
  *
- * <p>{@code GestorDatos} implementa el patrón de diseño <strong>Singleton</strong>:
- * dado que el sistema no utiliza una base de datos externa, esta clase actúa
- * como la "Base de Datos en Memoria" de la aplicación, manteniendo las cuatro
- * listas centrales del dominio:</p>
- * <ul>
- *   <li>{@link Tutor} — perfiles de tutores registrados.</li>
- *   <li>{@link Estudiante} — perfiles de estudiantes registrados.</li>
- *   <li>{@link Solicitud} — solicitudes de tutoría pendientes, archivadas o
- *       convertidas.</li>
- *   <li>{@link Reserva} — clases agendadas, canceladas o archivadas.</li>
- * </ul>
+ * GestorDatos implementa el patrón de diseño Singleton: dado que el sistema no utiliza una base
+ * de datos externa, esta clase actúa como la "Base de Datos en Memoria" de la aplicación,
+ * manteniendo las cuatro listas centrales del dominio:
+ * - Tutor: perfiles de tutores registrados.
+ * - Estudiante: perfiles de estudiantes registrados.
+ * - Solicitud: solicitudes de tutoría pendientes, archivadas o convertidas.
+ * - Reserva: clases agendadas, canceladas o archivadas.
  *
- * <p>Todas las capas del sistema (controlador y vista) deben obtener y
- * modificar estos datos exclusivamente a través de
- * {@link #getInstancia()}; ninguna otra clase debe instanciar
- * {@code GestorDatos} directamente, ya que el constructor es privado.</p>
+ * Todas las capas del sistema (controlador y vista) deben obtener y modificar estos datos
+ * exclusivamente a través de getInstancia(); ninguna otra clase debe instanciar GestorDatos
+ * directamente, ya que el constructor es privado.
  *
- * <p>La inicialización de la instancia es <em>perezosa</em> (lazy) y
- * thread-safe mediante doble verificación de bloqueo
- * (<em>double-checked locking</em>) sobre un campo {@code volatile}.</p>
+ * La inicialización de la instancia es perezosa (lazy) y thread-safe mediante doble verificación
+ * de bloqueo (double-checked locking) sobre un campo volatile.
  *
- * <p>Ejemplo de uso típico desde el controlador:</p>
- * <pre>{@code
+ * Ejemplo de uso típico desde el controlador:
+ *
  * GestorDatos gestor = GestorDatos.getInstancia();
  * gestor.inicializarDatosEstaticos();
  *
  * List<Tutor> disponibles = gestor.getTutores();
  * gestor.guardarReserva(nuevaReserva);
- * }</pre>
- *
- * @author  Bastián
- * @version 1.0
- * @see     Tutor
- * @see     Estudiante
- * @see     Solicitud
- * @see     Reserva
- * @see     ConflictoHorarioException
  */
 public class GestorDatos {
 
-    // -------------------------------------------------------------------------
-    // Instancia Singleton
-    // -------------------------------------------------------------------------
-
     /**
-     * Única instancia de {@code GestorDatos} en toda la aplicación.
+     * Única instancia de GestorDatos en toda la aplicación.
      *
-     * <p>Declarada {@code volatile} para garantizar la visibilidad correcta
-     * entre hilos durante la inicialización perezosa con doble verificación
-     * de bloqueo (necesario porque la vista Swing corre en el Event Dispatch
-     * Thread y eventuales tareas en segundo plano podrían acceder al gestor
-     * concurrentemente).</p>
+     * Declarada volatile para garantizar la visibilidad correcta entre hilos durante la
+     * inicialización perezosa con doble verificación de bloqueo (necesario porque la vista Swing
+     * corre en el Event Dispatch Thread y eventuales tareas en segundo plano podrían acceder al
+     * gestor concurrentemente).
      */
     private static volatile GestorDatos instancia;
-
-    // -------------------------------------------------------------------------
-    // Listas centrales (estado en memoria)
-    // -------------------------------------------------------------------------
 
     /** Lista de todos los tutores registrados en el sistema. */
     private final List<Tutor> tutores;
@@ -89,34 +64,29 @@ public class GestorDatos {
      */
     private boolean datosInicializados;
 
-    // -------------------------------------------------------------------------
-    // Constructor privado (Singleton)
-    // -------------------------------------------------------------------------
-
     /**
-     * Constructor privado que impide la instanciación externa, garantizando
-     * que {@code GestorDatos} tenga una única instancia en toda la
-     * aplicación.
+     * Constructor privado que impide la instanciación externa, garantizando que GestorDatos
+     * tenga una única instancia en toda la aplicación.
      *
-     * <p>Inicializa las cuatro listas centrales vacías; el Mock Data se
-     * carga explícitamente mediante {@link #inicializarDatosEstaticos()}.</p>
+     * Inicializa las cuatro listas centrales vacías; el Mock Data se carga explícitamente
+     * mediante inicializarDatosEstaticos().
      */
     private GestorDatos() {
-        this.tutores            = new ArrayList<>();
-        this.estudiantes        = new ArrayList<>();
-        this.solicitudes        = new ArrayList<>();
-        this.reservas           = new ArrayList<>();
+        this.tutores = new ArrayList<>();
+        this.estudiantes = new ArrayList<>();
+        this.solicitudes = new ArrayList<>();
+        this.reservas = new ArrayList<>();
         this.datosInicializados = false;
     }
 
     /**
-     * Retorna la única instancia de {@code GestorDatos} en la aplicación,
-     * creándola en el primer llamado (inicialización perezosa).
+     * Retorna la única instancia de GestorDatos en la aplicación, creándola en el primer
+     * llamado (inicialización perezosa).
      *
-     * <p>Implementa doble verificación de bloqueo para minimizar el costo de
-     * sincronización en llamados posteriores al primero.</p>
+     * Implementa doble verificación de bloqueo para minimizar el costo de sincronización en
+     * llamados posteriores al primero.
      *
-     * @return instancia única y compartida de {@code GestorDatos}
+     * @return Instancia única y compartida de GestorDatos.
      */
     public static GestorDatos getInstancia() {
         GestorDatos resultado = instancia;
@@ -131,35 +101,13 @@ public class GestorDatos {
         return resultado;
     }
 
-    // -------------------------------------------------------------------------
-    // Inicialización de Mock Data
-    // -------------------------------------------------------------------------
-
     /**
-     * Puebla el gestor con los datos estáticos (Mock Data) usados durante el
-     * desarrollo y las demostraciones del sistema: 4 estudiantes y 3 tutores,
-     * tomados de los bocetos de interfaz del proyecto.
+     * Puebla el gestor con los datos estáticos (Mock Data) usados durante el desarrollo y las
+     * demostraciones del sistema: 4 estudiantes y 3 tutores, tomados de los bocetos de interfaz.
      *
-     * <p>Estudiantes creados:</p>
-     * <ul>
-     *   <li>Pedro Pablo González — Ingeniería Comercial, 3er semestre.</li>
-     *   <li>María José Fernández — Psicología, 5to semestre.</li>
-     *   <li>Juan Ignacio Soto — Ingeniería Civil Industrial, 2do semestre.</li>
-     *   <li>Laura Beatriz Muñoz — Derecho, 4to semestre.</li>
-     * </ul>
-     *
-     * <p>Tutores creados:</p>
-     * <ul>
-     *   <li>Jong Si-yun — Estadística Inferencial (afinidad Ciencias Exactas).</li>
-     *   <li>Carla Andrea Reyes — Inglés B2 (afinidad Humanidades).</li>
-     *   <li>Roberto Esteban Díaz — Cálculo I (afinidad Ciencias Exactas).</li>
-     * </ul>
-     *
-     * <p>Este método es <strong>idempotente</strong>: si ya fue ejecutado
-     * anteriormente sobre esta instancia, las llamadas subsiguientes no
-     * tienen efecto y no duplican los registros. Para forzar una recarga
-     * completa, use {@link #reiniciar()} antes de volver a invocar este
-     * método.</p>
+     * Este método es idempotente: si ya fue ejecutado anteriormente sobre esta instancia, las
+     * llamadas subsiguientes no tienen efecto y no duplican los registros. Para forzar una recarga
+     * completa, use reiniciar() antes de volver a invocar este método.
      */
     public void inicializarDatosEstaticos() {
     if (datosInicializados) return;
@@ -210,12 +158,13 @@ public class GestorDatos {
         ));
     }
 
+    /**
+     * Crea y registra las solicitudes iniciales para el Mock Data.
+     */
     private void crearSolicitudesMock() {
-    // Obtenemos los estudiantes recién creados (asumiendo el orden de inserción)
-    Estudiante pedro = estudiantes.get(0); // Pedro Jiménez
-    Estudiante maria = estudiantes.get(1); // María
-    
-    // Matriz de horario deseado para Pedro (Desea Lunes, Miércoles y Viernes en las mañanas)
+    Estudiante pedro = estudiantes.get(0);
+    Estudiante maria = estudiantes.get(1);
+
     boolean[][] horarioPedro = new boolean[ConstantesHorario.DIAS][ConstantesHorario.BLOQUES];
     horarioPedro[0][0] = true; horarioPedro[0][1] = true; horarioPedro[0][2] = true; // Lunes
     horarioPedro[2][0] = true; horarioPedro[2][1] = true; horarioPedro[2][2] = true; // Miércoles
@@ -229,7 +178,6 @@ public class GestorDatos {
         pedro
     ));
 
-    // Crear al menos la solicitud vacía de María para que se vea en el panel
     registrarSolicitud(new Solicitud(
         "S-002", 
         "Refuerzo de Química", 
@@ -239,19 +187,17 @@ public class GestorDatos {
     ));
 }
     /**
-     * Crea y registra los 3 tutores de Mock Data, cada uno con una matriz
-     * de disponibilidad {@code boolean[5][6]} distinta para permitir probar
-     * los algoritmos de {@code BusquedaPorHorario} y {@code BusquedaPorAfinidad}.
+     * Crea y registra los 3 tutores de Mock Data, cada uno con una matriz de disponibilidad distinta.
+     * La matriz tiene un orden desde el Lunes al Viernes.
      */
     private void crearTutoresMock() {
 
-        // Jong Si-yun: disponible en bloques matutinos de Lunes, Miércoles y Viernes.
         boolean[][] horarioJong = {
-            { true,  true,  false, false, false, false }, // Lunes
-            { false, false, false, false, false, false }, // Martes
-            { true,  true,  false, false, false, false }, // Miércoles
-            { false, false, false, false, false, false }, // Jueves
-            { true,  true,  false, false, false, false }  // Viernes
+            { true,  true,  false, false, false, false },
+            { false, false, false, false, false, false },
+            { true,  true,  false, false, false, false },
+            { false, false, false, false, false, false },
+            { true,  true,  false, false, false, false }
         };
         registrarTutor(new Tutor(
             "Jong Si-yun",
@@ -265,13 +211,12 @@ public class GestorDatos {
             15000.0
         ));
 
-        // Carla Andrea Reyes: disponible en bloques de tarde, Martes a Jueves.
         boolean[][] horarioCarla = {
-            { false, false, false, false, false, false }, // Lunes
-            { false, false, false, true,  true,  false }, // Martes
-            { false, false, false, true,  true,  false }, // Miércoles
-            { false, false, false, true,  true,  false }, // Jueves
-            { false, false, false, false, false, false }  // Viernes
+            { false, false, false, false, false, false },
+            { false, false, false, true,  true,  false },
+            { false, false, false, true,  true,  false },
+            { false, false, false, true,  true,  false },
+            { false, false, false, false, false, false }
         };
         registrarTutor(new Tutor(
             "Carla Andrea Reyes",
@@ -285,13 +230,12 @@ public class GestorDatos {
             12000.0
         ));
 
-        // Roberto Esteban Díaz: disponible en bloques variados, Lunes a Viernes.
         boolean[][] horarioRoberto = {
-            { false, false, true,  true,  false, false }, // Lunes
-            { false, false, true,  true,  false, false }, // Martes
-            { false, false, false, false, false, false }, // Miércoles
-            { false, false, true,  true,  false, false }, // Jueves
-            { false, false, false, false, true,  true  }  // Viernes
+            { false, false, true,  true,  false, false },
+            { false, false, true,  true,  false, false },
+            { false, false, false, false, false, false },
+            { false, false, true,  true,  false, false },
+            { false, false, false, false, true,  true  }
         };
         registrarTutor(new Tutor(
             "Roberto Esteban Díaz",
@@ -306,15 +250,11 @@ public class GestorDatos {
         ));
     }
 
-    // -------------------------------------------------------------------------
-    // Operaciones sobre Tutores
-    // -------------------------------------------------------------------------
-
     /**
      * Registra un nuevo tutor en el sistema.
      *
-     * @param tutor tutor a registrar; no puede ser {@code null}
-     * @throws IllegalArgumentException si {@code tutor} es {@code null}
+     * @param tutor Tutor a registrar.
+     * @throws IllegalArgumentException Si el tutor es nulo.
      */
     public void registrarTutor(Tutor tutor) {
         if (tutor == null)
@@ -325,26 +265,17 @@ public class GestorDatos {
     /**
      * Elimina un tutor del sistema.
      *
-     * <p>Esta operación no valida si el tutor posee reservas activas; esa
-     * regla de negocio corresponde a la capa de controlador antes de invocar
-     * este método.</p>
-     *
-     * @param tutor tutor a eliminar
-     * @return {@code true} si el tutor estaba registrado y fue eliminado
+     * @param tutor Tutor a eliminar.
+     * @return Verdadero si el tutor estaba registrado y fue eliminado correctamente.
      */
     public boolean eliminarTutor(Tutor tutor) {
         return tutores.remove(tutor);
     }
 
     /**
-     * Retorna una vista <strong>no modificable</strong> de la lista de
-     * tutores registrados.
+     * Retorna una vista no modificable de la lista de tutores registrados.
      *
-     * <p>Para agregar o quitar tutores debe usarse
-     * {@link #registrarTutor(Tutor)} o {@link #eliminarTutor(Tutor)}; intentar
-     * modificar la lista retornada lanza {@link UnsupportedOperationException}.</p>
-     *
-     * @return lista no modificable de tutores; nunca {@code null}
+     * @return Lista no modificable de tutores; nunca nula.
      */
     public List<Tutor> getTutores() {
         return Collections.unmodifiableList(tutores);
@@ -353,8 +284,8 @@ public class GestorDatos {
     /**
      * Busca un tutor por su identificador único.
      *
-     * @param id identificador del tutor
-     * @return {@link Optional} con el tutor encontrado, o vacío si no existe
+     * @param id Identificador único del tutor.
+     * @return Un Optional con el tutor encontrado, o vacío si no existe.
      */
     public Optional<Tutor> buscarTutorPorId(String id) {
         return tutores.stream()
@@ -362,15 +293,11 @@ public class GestorDatos {
                        .findFirst();
     }
 
-    // -------------------------------------------------------------------------
-    // Operaciones sobre Estudiantes
-    // -------------------------------------------------------------------------
-
     /**
      * Registra un nuevo estudiante en el sistema.
      *
-     * @param estudiante estudiante a registrar; no puede ser {@code null}
-     * @throws IllegalArgumentException si {@code estudiante} es {@code null}
+     * @param estudiante Estudiante a registrar.
+     * @throws IllegalArgumentException Si el estudiante es nulo.
      */
     public void registrarEstudiante(Estudiante estudiante) {
         if (estudiante == null)
@@ -381,18 +308,17 @@ public class GestorDatos {
     /**
      * Elimina un estudiante del sistema.
      *
-     * @param estudiante estudiante a eliminar
-     * @return {@code true} si el estudiante estaba registrado y fue eliminado
+     * @param estudiante Estudiante a eliminar.
+     * @return Verdadero si el estudiante estaba registrado y fue eliminado.
      */
     public boolean eliminarEstudiante(Estudiante estudiante) {
         return estudiantes.remove(estudiante);
     }
 
     /**
-     * Retorna una vista <strong>no modificable</strong> de la lista de
-     * estudiantes registrados.
+     * Retorna una vista no modificable de la lista de estudiantes registrados.
      *
-     * @return lista no modificable de estudiantes; nunca {@code null}
+     * @return Lista no modificable de estudiantes; nunca nula.
      */
     public List<Estudiante> getEstudiantes() {
         return Collections.unmodifiableList(estudiantes);
@@ -401,8 +327,8 @@ public class GestorDatos {
     /**
      * Busca un estudiante por su identificador único.
      *
-     * @param id identificador del estudiante
-     * @return {@link Optional} con el estudiante encontrado, o vacío si no existe
+     * @param id Identificador único del estudiante.
+     * @return Un Optional con el estudiante encontrado, o vacío si no existe.
      */
     public Optional<Estudiante> buscarEstudiantePorId(String id) {
         return estudiantes.stream()
@@ -410,19 +336,11 @@ public class GestorDatos {
                           .findFirst();
     }
 
-    // -------------------------------------------------------------------------
-    // Operaciones sobre Solicitudes
-    // -------------------------------------------------------------------------
-
     /**
      * Registra una nueva solicitud de tutoría en el sistema.
      *
-     * <p>Las solicitudes recién registradas inician en estado
-     * {@link Solicitud.EstadoSolicitud#PENDIENTE} (definido por el propio
-     * constructor de {@link Solicitud}).</p>
-     *
-     * @param solicitud solicitud a registrar; no puede ser {@code null}
-     * @throws IllegalArgumentException si {@code solicitud} es {@code null}
+     * @param solicitud Solicitud a registrar.
+     * @throws IllegalArgumentException Si la solicitud es nula.
      */
     public void registrarSolicitud(Solicitud solicitud) {
         if (solicitud == null)
@@ -433,34 +351,26 @@ public class GestorDatos {
     /**
      * Elimina una solicitud del sistema de forma permanente.
      *
-     * <p>Para descartar una solicitud sin perder su historial, prefiera
-     * cambiar su estado a {@link Solicitud.EstadoSolicitud#ARCHIVADA} mediante
-     * {@code ComandoArchivar} en lugar de eliminarla con este método.</p>
-     *
-     * @param solicitud solicitud a eliminar
-     * @return {@code true} si la solicitud estaba registrada y fue eliminada
+     * @param solicitud Solicitud a eliminar.
+     * @return Verdadero si la solicitud existía y fue eliminada.
      */
     public boolean eliminarSolicitud(Solicitud solicitud) {
         return solicitudes.remove(solicitud);
     }
 
     /**
-     * Retorna una vista <strong>no modificable</strong> de la lista completa
-     * de solicitudes (en cualquier estado).
+     * Retorna una vista no modificable de la lista completa de solicitudes.
      *
-     * @return lista no modificable de solicitudes; nunca {@code null}
+     * @return Lista no modificable de solicitudes; nunca nula.
      */
     public List<Solicitud> getSolicitudes() {
         return Collections.unmodifiableList(solicitudes);
     }
 
     /**
-     * Retorna únicamente las solicitudes en estado
-     * {@link Solicitud.EstadoSolicitud#PENDIENTE}, tal como se listan en el
-     * panel de bienvenida del administrador.
+     * Retorna únicamente las solicitudes que se encuentran en estado pendiente.
      *
-     * @return nueva lista (modificable) con las solicitudes pendientes;
-     *         vacía si no hay ninguna
+     * @return Nueva lista modificable con las solicitudes pendientes.
      */
     public List<Solicitud> getSolicitudesPendientes() {
         List<Solicitud> pendientes = new ArrayList<>();
@@ -475,8 +385,8 @@ public class GestorDatos {
     /**
      * Busca una solicitud por su identificador único.
      *
-     * @param id identificador de la solicitud
-     * @return {@link Optional} con la solicitud encontrada, o vacío si no existe
+     * @param id Identificador único de la solicitud.
+     * @return Un Optional con la solicitud encontrada, o vacío si no existe.
      */
     public Optional<Solicitud> buscarSolicitudPorId(String id) {
         return solicitudes.stream()
@@ -484,27 +394,12 @@ public class GestorDatos {
                           .findFirst();
     }
 
-    // -------------------------------------------------------------------------
-    // Operaciones sobre Reservas
-    // -------------------------------------------------------------------------
-
     /**
-     * Registra una nueva reserva en el sistema, previniendo conflictos
-     * horarios.
+     * Registra una nueva reserva en el sistema previniendo conflictos horarios de tutores.
      *
-     * <p>Antes de agregar la reserva, este método recorre todas las reservas
-     * activas y verifica, mediante {@link Reserva#conflictaCon(Reserva)}, que
-     * ninguna comparta el mismo tutor, día y bloque horario con la reserva
-     * entrante.</p>
-     *
-     * <p>Este es el método central que {@code ComandoAgendar} invoca al
-     * mover una {@link Solicitud} a una {@code Reserva} confirmada.</p>
-     *
-     * @param reserva reserva a registrar; no puede ser {@code null}
-     * @throws IllegalArgumentException   si {@code reserva} es {@code null}
-     * @throws ConflictoHorarioException  si la reserva colisiona con otra
-     *                                    reserva activa del mismo tutor en el
-     *                                    mismo bloque horario
+     * @param reserva Reserva a registrar.
+     * @throws IllegalArgumentException  Si la reserva es nula.
+     * @throws ConflictoHorarioException Si la reserva colisiona con otra reserva activa del mismo tutor.
      */
     public void guardarReserva(Reserva reserva) {
         if (reserva == null)
@@ -527,38 +422,28 @@ public class GestorDatos {
     /**
      * Elimina una reserva del sistema de forma permanente.
      *
-     * <p>Para anular una clase sin perder su historial, prefiera cambiar su
-     * estado a {@link Reserva.EstadoReserva#CANCELADA} mediante
-     * {@code reserva.setEstado(EstadoReserva.CANCELADA)} en lugar de
-     * eliminarla con este método. Una reserva cancelada libera
-     * automáticamente el bloque horario, ya que
-     * {@link Reserva#conflictaCon(Reserva)} ignora reservas inactivas.</p>
-     *
-     * @param reserva reserva a eliminar
-     * @return {@code true} si la reserva estaba registrada y fue eliminada
+     * @param reserva Reserva a eliminar.
+     * @return Verdadero si la reserva existía y fue removida con éxito.
      */
     public boolean eliminarReserva(Reserva reserva) {
         return reservas.remove(reserva);
     }
 
     /**
-     * Retorna una vista <strong>no modificable</strong> de la lista completa
-     * de reservas (en cualquier estado).
+     * Retorna una vista no modificable de la lista completa de reservas.
      *
-     * @return lista no modificable de reservas; nunca {@code null}
+     * @return Lista no modificable de reservas; nunca nula.
      */
     public List<Reserva> getReservas() {
         return Collections.unmodifiableList(reservas);
     }
 
     /**
-     * Retorna las reservas activas (no canceladas) registradas para una
-     * fecha específica, base del "calendario" general del sistema.
+     * Retorna las reservas activas asociadas a una fecha específica de calendario.
      *
-     * @param fecha fecha a consultar; no puede ser {@code null}
-     * @return nueva lista (modificable) con las reservas activas de esa
-     *         fecha; vacía si no hay ninguna
-     * @throws IllegalArgumentException si {@code fecha} es {@code null}
+     * @param fecha Fecha de consulta.
+     * @return Nueva lista modificable con las reservas activas de esa fecha.
+     * @throws IllegalArgumentException Si la fecha proporcionada es nula.
      */
     public List<Reserva> getReservasPorFecha(LocalDate fecha) {
         if (fecha == null)
@@ -574,15 +459,11 @@ public class GestorDatos {
     }
 
     /**
-     * Retorna la vista filtrada del calendario para un tutor específico:
-     * todas sus reservas activas, ordenadas implícitamente por orden de
-     * inserción.
+     * Retorna las reservas activas asignadas a un tutor específico.
      *
-     * @param tutor tutor cuyas reservas se desean consultar; no puede ser
-     *              {@code null}
-     * @return nueva lista (modificable) con las reservas activas del tutor;
-     *         vacía si no tiene ninguna
-     * @throws IllegalArgumentException si {@code tutor} es {@code null}
+     * @param tutor Tutor cuyas reservas se desean consultar.
+     * @return Nueva lista modificable con las reservas activas del tutor.
+     * @throws IllegalArgumentException Si el tutor es nulo.
      */
     public List<Reserva> getReservasPorTutor(Tutor tutor) {
         if (tutor == null)
@@ -598,14 +479,11 @@ public class GestorDatos {
     }
 
     /**
-     * Retorna la vista filtrada del calendario para un estudiante específico:
-     * todas sus reservas activas.
+     * Retorna las reservas activas asignadas a un estudiante específico.
      *
-     * @param estudiante estudiante cuyas reservas se desean consultar; no
-     *                   puede ser {@code null}
-     * @return nueva lista (modificable) con las reservas activas del
-     *         estudiante; vacía si no tiene ninguna
-     * @throws IllegalArgumentException si {@code estudiante} es {@code null}
+     * @param estudiante Estudiante cuyas reservas se desean consultar.
+     * @return Nueva lista modificable con las reservas activas del estudiante.
+     * @throws IllegalArgumentException Si el estudiante es nulo.
      */
     public List<Reserva> getReservasPorEstudiante(Estudiante estudiante) {
         if (estudiante == null)
@@ -623,8 +501,8 @@ public class GestorDatos {
     /**
      * Busca una reserva por su identificador único.
      *
-     * @param id identificador de la reserva
-     * @return {@link Optional} con la reserva encontrada, o vacío si no existe
+     * @param id Identificador único de la reserva.
+     * @return Un Optional con la reserva encontrada, o vacío si no existe.
      */
     public Optional<Reserva> buscarReservaPorId(String id) {
         return reservas.stream()
@@ -632,17 +510,8 @@ public class GestorDatos {
                        .findFirst();
     }
 
-    // -------------------------------------------------------------------------
-    // Utilidades de ciclo de vida del gestor
-    // -------------------------------------------------------------------------
-
     /**
-     * Vacía por completo las cuatro listas centrales y reinicia la bandera de
-     * inicialización, permitiendo recargar el Mock Data desde cero.
-     *
-     * <p>Pensado principalmente para pruebas unitarias y para el modo de
-     * desarrollo, donde puede ser necesario reiniciar el estado del sistema
-     * sin reiniciar la aplicación completa.</p>
+     * Vacía por completo las listas centrales y reinicia la bandera de inicialización.
      */
     public void reiniciar() {
         tutores.clear();
@@ -653,10 +522,9 @@ public class GestorDatos {
     }
 
     /**
-     * Indica si {@link #inicializarDatosEstaticos()} ya fue ejecutado sobre
-     * esta instancia.
+     * Indica si los datos estáticos del Mock Data ya se cargaron en el sistema.
      *
-     * @return {@code true} si el Mock Data ya fue cargado
+     * @return Verdadero si los datos ya fueron inicializados.
      */
     public boolean isDatosInicializados() {
         return datosInicializados;

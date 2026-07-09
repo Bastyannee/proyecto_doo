@@ -4,23 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Clase base del patrón Observer — el "sujeto" que notifica.
+ * Clase base abstracta para el sujeto del patrón Observer.
+ * Gestiona y notifica a la lista de paneles observadores registrados.
  *
- * Centraliza la lógica de mantener una lista de observadores
- * y notificarlos. ProxyTutor extiende esta clase para heredar
- * ese comportamiento sin repetir código.
- *
- * DECISIÓN DE DISEÑO:
- * Separar SujetoObservable de ProxyTutor respeta el principio
- * de responsabilidad única (SRP):
- *   - SujetoObservable sabe cómo gestionar y notificar observadores.
- *   - ProxyTutor sabe cómo delegar al Tutor real.
- * Ninguno hace el trabajo del otro.
- *
- * REUTILIZACIÓN:
- * Si en el futuro otro objeto del sistema también necesita notificar
- * observadores (por ejemplo, GestorDatos al agregar una reserva),
- * puede extender esta misma clase sin duplicar código.
+ * Separar esta clase de ProxyTutor respeta el principio de responsabilidad única
+ * y permite reutilizar esta lógica en otros objetos del sistema en el futuro.
  */
 public abstract class SujetoObservable {
 
@@ -55,12 +43,10 @@ public abstract class SujetoObservable {
     }
 
     /**
-     * Notifica a todos los observadores registrados.
-     * Se itera sobre una copia de la lista para evitar
-     * ConcurrentModificationException si un observador
-     * se desregistra durante la notificación.
+     * Notifica el cambio de tutor activo a todos los observadores registrados.
+     * Usa una copia de la lista para evitar errores de modificación concurrente.
      *
-     * @param perfil el perfil del tutor activo a comunicar
+     * @param perfil Los datos del tutor activo actual.
      */
     protected void notificarObservadores(PerfilSeleccionable perfil) {
         List<Observador> copia = new ArrayList<>(observadores);

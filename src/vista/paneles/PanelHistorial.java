@@ -19,45 +19,66 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- * Panel de historial de reservas confirmadas.
-
- * Muestra todas las reservas del sistema con foto circular del tutor,
- * badge de estado y botón de cancelar por fila.
-
- * CANCELAR RESERVA:
- * Usa reserva.setEstado(CANCELADA) — el metodo correcto según Reserva.java.
- * No llama a cancelar() que no existe en el modelo.
-
- * DESHACER:
- * Llama a HistorialOperaciones.deshacerUltimo() que internamente cancela
- * la reserva y restaura la solicitud a PENDIENTE, sin necesitar unexecute()
- * en la interfaz Comando.
+ * Panel de consulta y gestión retrospectiva que despliega el historial general de reservas.
+ *
+ * Esta clase expone de manera cronológica o secuencial todas las transiciones operadas en el
+ * sistema, empaquetando cada registro dentro de una tarjeta visual. Cada fila incluye la foto
+ * recortada en formato circular del tutor asignado, un badge cromático indicador del estado de
+ * vigencia de la cita y una botonera contextual de cancelación.
+ *
+ * Mecánica de cancelación:
+ * En alineación estricta con el modelo de dominio (Reserva.java), las cancelaciones directas
+ * manipulan el estado interno mutando la propiedad mediante setEstado hacia el valor pasivo
+ * CANCELADA, prescindiendo de llamadas abstractas a métodos de destrucción que no se hallan
+ * contemplados en el negocio.
+ *
+ * Transacciones reversibles (Deshacer):
+ * Para revertir de forma segura la última acción consolidada, el panel delega el flujo al
+ * singleton HistorialOperaciones.deshacerUltimo(). Este mecanismo intercepta la operación,
+ * da de baja la reserva y reacondiciona la solicitud de origen al estado PENDIENTE, evitando
+ * la necesidad de acoplar rutinas complejas de des-ejecución (unexecute) en las vistas.
  */
 public class PanelHistorial extends JPanel {
 
+    /** Coordinador central de rutas empleado para regresar a los menús principales. */
     private final Navegador navegador;
-    private final JPanel    panelReservas;
-    private final JLabel    labelConteo;
-    private final JButton   btnDeshacer;
+    /** Panel contenedor interno provisto de scroll que agrupa las filas de las tarjetas. */
+    private final JPanel panelReservas;
+    /** Etiqueta informativa que expone el balance cuantitativo de registros listados. */
+    private final JLabel labelConteo;
+    /** Disparador de restauración encargado de activar el des-procesamiento del último comando. */
+    private final JButton btnDeshacer;
 
+    /**
+     * Construye e inicializa el panel de historial configurando las barras de desplazamiento,
+     * estructurando el encabezado y gatillando la primera lectura del almacén de datos.
+     *
+     * @param navegador Instancia global del despachador de vistas del sistema.
+     */
     public PanelHistorial(Navegador navegador) {
-        this.navegador     = navegador;
+        this.navegador = navegador;
         this.panelReservas = new JPanel();
-        this.labelConteo   = new JLabel();
-        this.btnDeshacer   = new JButton("↩ Deshacer última reserva");
+        this.labelConteo = new JLabel();
+        this.btnDeshacer = new JButton("↩ Deshacer última reserva");
 
         setLayout(new BorderLayout());
         setBackground(Tema.FONDO);
-        add(crearEncabezado(),              BorderLayout.NORTH);
+        add(crearEncabezado(), BorderLayout.NORTH);
         add(new JScrollPane(panelReservas), BorderLayout.CENTER);
-        add(crearBotones(),                 BorderLayout.SOUTH);
+        add(crearBotones(), BorderLayout.SOUTH);
 
         panelReservas.setBackground(Tema.FONDO);
         refrescarHistorial();
     }
 
-    // ── API publica ──────────────────────────────────────────
-
+    /**
+     * Recombina y limpia los elementos visuales del listado barriendo la colección actualizada
+     * de reservas guardadas en el GestorDatos.
+     *
+     * Si la bitácora del sistema se encuentra vacía, inyecta un aviso estático de ausencia de datos.
+     * Evalúa además de manera reactiva el estado del stack de comandos para activar o deshabilitar
+     * el control gráfico de deshacer.
+     */
     public void refrescarHistorial() {
         List<Reserva> reservas = GestorDatos.getInstancia().getReservas();
         panelReservas.removeAll();
@@ -85,8 +106,12 @@ public class PanelHistorial extends JPanel {
         panelReservas.repaint();
     }
 
-    // ── Filas de reserva ─────────────────────────────────────
-
+    /**
+     * Ensambla una tarjeta visual independiente parametrizada con los atributos de una reserva.
+     *
+     * @param reserva Instancia de la entidad Reserva que provee el contexto de la fila.
+     * @return El subpanel JPanel maquetado con la información de la reserva y sus botones vinculados.
+     */
     private JPanel crearFilaReserva(Reserva reserva) {
         JPanel fila = new JPanel(new BorderLayout(Tema.PADDING, 0));
         fila.setBackground(Tema.FONDO_TARJETA);
@@ -95,10 +120,8 @@ public class PanelHistorial extends JPanel {
                 new EmptyBorder(Tema.PADDING_PEQUEÑO, Tema.PADDING,
                         Tema.PADDING_PEQUEÑO, Tema.PADDING)));
 
-        // Foto circular
         JLabel foto = crearFotoCircular(reserva.getTutor());
 
-        // Datos
         JPanel datos = new JPanel();
         datos.setLayout(new BoxLayout(datos, BoxLayout.Y_AXIS));
         datos.setBackground(Tema.FONDO_TARJETA);
@@ -126,7 +149,6 @@ public class PanelHistorial extends JPanel {
         datos.add(Box.createVerticalStrut(3));
         datos.add(lblHorario);
 
-        // Derecha: badge + botón cancelar
         JPanel derecho = new JPanel(new BorderLayout(0, 4));
         derecho.setBackground(Tema.FONDO_TARJETA);
 
@@ -141,21 +163,27 @@ public class PanelHistorial extends JPanel {
         btnCancelar.setPreferredSize(new Dimension(90, 30));
         btnCancelar.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btnCancelar.setEnabled(reserva.isActiva());
-        // Usa setEstado(CANCELADA) — el metodo correcto de Reserva
         btnCancelar.addActionListener(e -> cancelarReserva(reserva));
 
-        derecho.add(badge,       BorderLayout.NORTH);
+        derecho.add(badge, BorderLayout.NORTH);
         derecho.add(btnCancelar, BorderLayout.SOUTH);
 
-        fila.add(foto,    BorderLayout.WEST);
-        fila.add(datos,   BorderLayout.CENTER);
+        fila.add(foto, BorderLayout.WEST);
+        fila.add(datos, BorderLayout.CENTER);
         fila.add(derecho, BorderLayout.EAST);
         return fila;
     }
 
+    /**
+     * Construye un rótulo opaco con bordes redondeados simulados para denotar visualmente
+     * si la reserva continúa activa o ha sido revocada.
+     *
+     * @param reserva Entidad de la cual se lee la vigencia.
+     * @return Componente JLabel configurado con colores de contraste del tema.
+     */
     private JLabel crearBadge(Reserva reserva) {
         String texto = reserva.isActiva() ? "ACTIVA" : "CANCELADA";
-        Color  fondo = reserva.isActiva() ? Tema.ACENTO : Tema.TEXTO_SECUNDARIO;
+        Color fondo = reserva.isActiva() ? Tema.ACENTO : Tema.TEXTO_SECUNDARIO;
         JLabel b = new JLabel(texto, SwingConstants.CENTER);
         b.setFont(Tema.FUENTE_PEQUENA);
         b.setForeground(Color.WHITE);
@@ -166,8 +194,14 @@ public class PanelHistorial extends JPanel {
     }
 
     /**
-     * Carga foto desde assets/fotos/ y la recorta en círculo.
-     * Si no existe el archivo, genera un avatar con las iniciales del tutor.
+     * Recupera una imagen de disco desde las rutas de recursos del sistema y aplica una máscara
+     * geométrica elíptica para recortarla en forma de círculo.
+     *
+     * Si la ruta resulta inaccesible o es inexistente, el método se recupera de manera pasiva
+     * renderizando un avatar circular con relleno plano que porta las iniciales del tutor en el centro.
+     *
+     * @param tutor Entidad de la cual se extrae la ruta del asset fotográfico y las iniciales.
+     * @return Una etiqueta conteniendo el ImageIcon procesado con suavizado de bordes (Antialiasing).
      */
     private JLabel crearFotoCircular(Tutor tutor) {
         int size = 60;
@@ -187,7 +221,6 @@ public class PanelHistorial extends JPanel {
             g2.setClip(new Ellipse2D.Float(0, 0, size, size));
             g2.drawImage(imagen.getScaledInstance(size, size, Image.SCALE_SMOOTH), 0, 0, null);
         } else {
-            // Avatar de iniciales cuando no hay imagen
             g2.setColor(Tema.PRIMARIO);
             g2.fillOval(0, 0, size, size);
             g2.setColor(Color.WHITE);
@@ -206,6 +239,13 @@ public class PanelHistorial extends JPanel {
         return label;
     }
 
+    /**
+     * Parsea una cadena de texto extrayendo el primer carácter de los dos primeros bloques
+     * de palabras para conformar el juego de iniciales del avatar.
+     *
+     * @param nombre Cadena con el nombre del profesional.
+     * @return Una cadena en mayúsculas de máximo dos caracteres.
+     */
     private String obtenerIniciales(String nombre) {
         String[] partes = nombre.trim().split("\\s+");
         StringBuilder sb = new StringBuilder();
@@ -215,8 +255,12 @@ public class PanelHistorial extends JPanel {
         return sb.toString();
     }
 
-    // ── Logica ───────────────────────────────────────────────
-
+    /**
+     * Dispara un cuadro de diálogo confirmatorio e interrumpe la vigencia de la reserva
+     * conmutando su estado interno en el modelo.
+     *
+     * @param reserva Instancia concreta de la reserva que se desea dar de baja.
+     */
     private void cancelarReserva(Reserva reserva) {
         int ok = JOptionPane.showConfirmDialog(this,
                 "¿Cancelar la reserva con " + reserva.getTutor().getNombre() + "?",
@@ -225,14 +269,17 @@ public class PanelHistorial extends JPanel {
                 JOptionPane.WARNING_MESSAGE);
 
         if (ok == JOptionPane.YES_OPTION) {
-            // setEstado es el método correcto — Reserva no tiene cancelar()
             reserva.setEstado(Reserva.EstadoReserva.CANCELADA);
             refrescarHistorial();
         }
     }
 
-    // ── UI ───────────────────────────────────────────────────
-
+    /**
+     * Modela la barra superior corporativa (Zona Norte) disponiendo los títulos del panel
+     * y la etiqueta dinámica de conteo estadístico.
+     *
+     * @return El panel JPanel del encabezado con sus fuentes y paddings corporativos.
+     */
     private JPanel crearEncabezado() {
         JPanel p = new JPanel(new BorderLayout());
         p.setBackground(Tema.PRIMARIO);
@@ -257,6 +304,12 @@ public class PanelHistorial extends JPanel {
         return p;
     }
 
+    /**
+     * Construye la faja de utilidades del extremo inferior (Zona Sur) acoplando los botones
+     * de escape direccional y el disparador de des-hacer.
+     *
+     * @return Un panel contenedor alineado a la derecha con los botones estilizados del pie.
+     */
     private JPanel crearBotones() {
         JPanel p = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         p.setBackground(Tema.FONDO);

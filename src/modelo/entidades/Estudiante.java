@@ -4,44 +4,17 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Representa a un estudiante registrado en el Sistema de Reservas de Clases
- * Particulares.
+ * Representa a un estudiante registrado en el Sistema de Reservas de Clases Particulares.
  *
- * <p>Un {@code Estudiante} es la entidad central del flujo del sistema: genera
- * {@link Solicitud}es de tutoría que el administrador procesa para crear
- * {@link Reserva}s con un {@link Tutor} disponible.</p>
+ * Es una entidad central del flujo del sistema: genera solicitudes de tutoría
+ * que luego se procesan para agendar las reservas con los tutores.
  *
- * <p>Invariantes de clase:</p>
- * <ul>
- *   <li>{@code nombre}, {@code carrera} y {@code correo} nunca son {@code null}
- *       ni cadenas en blanco.</li>
- *   <li>{@code semestre} siempre está en el rango
- *       [{@value #SEMESTRE_MIN}, {@value #SEMESTRE_MAX}].</li>
- *   <li>{@code id} es inmutable y único dentro de la sesión.</li>
- * </ul>
- *
- * <p>Ejemplo de construcción:</p>
- * <pre>{@code
- * Estudiante e = new Estudiante(
- *     "Pedro Soto",
- *     "Ingeniería Comercial",
- *     3,
- *     "pedro.soto@mail.com",
- *     "Necesito ayuda con derivadas",
- *     "assets/fotos/pedro.png"
- * );
- * }</pre>
- *
- * @author  Bastián
- * @version 1.0
- * @see     Solicitud
- * @see     Reserva
+ * Invariantes de la clase:
+ * - El nombre, la carrera y el correo son obligatorios (no nulos ni vacíos).
+ * - El semestre debe estar estrictamente dentro del rango permitido (SEMESTRE_MIN a SEMESTRE_MAX).
+ * - El ID se autogenera en la construcción y es único e inmutable.
  */
 public class Estudiante {
-
-    // -------------------------------------------------------------------------
-    // Constantes de dominio
-    // -------------------------------------------------------------------------
 
     /** Semestre mínimo válido para cualquier estudiante del sistema. */
     public static final int SEMESTRE_MIN = 1;
@@ -49,28 +22,22 @@ public class Estudiante {
     /** Semestre máximo válido para cualquier estudiante del sistema. */
     public static final int SEMESTRE_MAX = 12;
 
-    // -------------------------------------------------------------------------
-    // Atributos
-    // -------------------------------------------------------------------------
-
     /**
      * Identificador único del estudiante, generado automáticamente como UUID
      * al momento de la construcción. Inmutable durante toda la vida del objeto.
      */
     private final String id;
 
-    /** Nombre completo del estudiante (p. ej., "Pedro Soto García"). */
+    /** Nombre completo del estudiante */
     private String nombre;
 
     /**
-     * Carrera universitaria del estudiante (p. ej., "Ingeniería Comercial",
-     * "Psicología", "Derecho").
+     * Carrera universitaria del estudiante
      */
     private String carrera;
 
     /**
-     * Semestre académico actual del estudiante.
-     * Debe estar en el rango [{@value #SEMESTRE_MIN}, {@value #SEMESTRE_MAX}].
+     * Semestre académico actual del estudiante (debe estar entre 1 y 12).
      */
     private int semestre;
 
@@ -91,54 +58,33 @@ public class Estudiante {
     /**
      * Ruta relativa o absoluta al archivo de imagen de perfil del estudiante
      * dentro del sistema de archivos de la aplicación
-     * (p. ej., {@code "assets/fotos/pedro.png"}).
      * Puede ser {@code null} si no se ha asignado foto.
      */
     private String fotoPath;
 
-    // -------------------------------------------------------------------------
-    // Constructor
-    // -------------------------------------------------------------------------
-
     /**
-     * Crea un nuevo {@code Estudiante} con todos sus atributos principales.
+     * Crea un nuevo Estudiante y autogenera su identificador único.
      *
-     * <p>El {@code id} es generado automáticamente; no se proporciona como
-     * parámetro.</p>
-     *
-     * @param nombre     nombre completo del estudiante; no puede ser
-     *                   {@code null} ni en blanco
-     * @param carrera    carrera universitaria; no puede ser {@code null} ni en
-     *                   blanco
-     * @param semestre   semestre actual; debe estar en
-     *                   [{@value #SEMESTRE_MIN}, {@value #SEMESTRE_MAX}]
-     * @param correo     dirección de correo electrónico; no puede ser
-     *                   {@code null} ni en blanco
-     * @param comentario comentario libre del estudiante; {@code null} se
-     *                   normaliza a cadena vacía
-     * @param fotoPath   ruta al archivo de imagen; puede ser {@code null}
-     * @throws IllegalArgumentException si {@code nombre}, {@code carrera} o
-     *                                  {@code correo} son nulos/en blanco, o si
-     *                                  {@code semestre} está fuera de rango
+     * @param nombre Nombre completo; no puede ser nulo ni estar en blanco.
+     * @param carrera Carrera universitaria; no puede ser nula ni estar en blanco.
+     * @param semestre Semestre académico actual; debe estar entre 1 y 12.
+     * @param correo Correo electrónico; no puede ser nulo ni estar en blanco.
+     * @param comentario Nota del estudiante; si llega nulo se normaliza a texto vacío.
+     * @param fotoPath Ruta del archivo de la foto; puede ser nula.
+     * @throws IllegalArgumentException Si algún campo obligatorio es inválido o el semestre está fuera de rango.
      */
-    public Estudiante(String nombre, String carrera, int semestre,
-                      String correo, String comentario, String fotoPath) {
-
+    public Estudiante(String nombre, String carrera, int semestre, String correo, String comentario, String fotoPath) {
         validarNombreCarreraCorreo(nombre, carrera, correo);
         validarSemestre(semestre);
 
-        this.id         = UUID.randomUUID().toString();
-        this.nombre     = nombre.strip();
-        this.carrera    = carrera.strip();
-        this.semestre   = semestre;
-        this.correo     = correo.strip();
+        this.id = UUID.randomUUID().toString();
+        this.nombre = nombre.strip();
+        this.carrera = carrera.strip();
+        this.semestre = semestre;
+        this.correo = correo.strip();
         this.comentario = (comentario != null) ? comentario.strip() : "";
-        this.fotoPath   = fotoPath;
+        this.fotoPath = fotoPath;
     }
-
-    // -------------------------------------------------------------------------
-    // Getters
-    // -------------------------------------------------------------------------
 
     /**
      * Retorna el identificador único e inmutable del estudiante.
@@ -203,10 +149,6 @@ public class Estudiante {
         return fotoPath;
     }
 
-    // -------------------------------------------------------------------------
-    // Setters con validación
-    // -------------------------------------------------------------------------
-
     /**
      * Actualiza el nombre completo del estudiante.
      *
@@ -234,8 +176,7 @@ public class Estudiante {
     /**
      * Actualiza el semestre académico actual del estudiante.
      *
-     * @param semestre nuevo semestre; debe estar en
-     *                 [{@value #SEMESTRE_MIN}, {@value #SEMESTRE_MAX}]
+     * @param semestre nuevo semestre; debe estar en el rango de 1 a 12.
      * @throws IllegalArgumentException si el semestre está fuera de rango
      */
     public void setSemestre(int semestre) {
@@ -273,10 +214,6 @@ public class Estudiante {
         this.fotoPath = fotoPath;
     }
 
-    // -------------------------------------------------------------------------
-    // Métodos auxiliares privados de validación
-    // -------------------------------------------------------------------------
-
     /**
      * Valida que los tres campos de texto obligatorios sean no nulos y no en
      * blanco.
@@ -286,9 +223,7 @@ public class Estudiante {
      * @param correo  correo a validar
      * @throws IllegalArgumentException si alguno de los parámetros es inválido
      */
-    private static void validarNombreCarreraCorreo(String nombre,
-                                                   String carrera,
-                                                   String correo) {
+    private static void validarNombreCarreraCorreo(String nombre, String carrera, String correo) {
         if (nombre == null || nombre.isBlank())
             throw new IllegalArgumentException("El nombre del estudiante es obligatorio.");
         if (carrera == null || carrera.isBlank())
@@ -310,13 +245,8 @@ public class Estudiante {
                 SEMESTRE_MIN, SEMESTRE_MAX, semestre));
     }
 
-    // -------------------------------------------------------------------------
-    // Sobreescritura de Object
-    // -------------------------------------------------------------------------
-
     /**
-     * Dos instancias de {@code Estudiante} son iguales si y sólo si comparten
-     * el mismo {@code id}.
+     * Compara la igualdad de dos estudiantes basándose únicamente en su ID único.
      *
      * @param obj objeto a comparar
      * @return {@code true} si ambos objetos representan al mismo estudiante

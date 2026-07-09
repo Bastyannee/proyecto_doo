@@ -14,19 +14,37 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Panel de búsqueda de tutores con tarjetas visuales y filtro por materia.
- * Al seleccionar un tutor llama a ProxyTutor.seleccionar() que notifica
- * automáticamente a PanelCalendario.
+ * Panel de interfaz gráfica destinado a la búsqueda, filtrado y selección de tutores académicos.
+ *
+ * Esta clase proporciona una vista en cuadrícula (Grid) compuesta por tarjetas visuales que
+ * resumen el perfil de cada tutor. Cuenta con una barra de búsqueda superior que actúa en
+ * tiempo real, procesando cadenas de texto para aislar registros específicos basándose en
+ * coincidencias con la materia impartida o el nombre del tutor.
+ *
+ * Al interactuar con el botón de disponibilidad de una tarjeta, la vista delega la gestión
+ * del estado de selección al patrón Proxy (ProxyTutor). Este componente actúa como un intermediario
+ * centralizado que almacena de forma segura al tutor elegido, notificando automáticamente a
+ * las vistas dependientes (como el panel del calendario) para sincronizar la grilla de bloques
+ * horarios antes de efectuar la transición de pantalla.
  */
 public class PanelBusqueda extends JPanel {
-
+    /** Coordinador de rutas de la interfaz que gestiona el cambio seguro de pantallas. */
     private final Navegador navegador;
-    private final JPanel    panelTarjetas;
+    /** Contenedor interno dinámico que aloja y distribuye las tarjetas gráficas de los tutores. */
+    private final JPanel panelTarjetas;
+    /** Campo de entrada de texto que captura las consultas de filtrado en tiempo real. */
     private final JTextField campoBusqueda;
-    private List<Tutor>     tutoresActuales;
+    /** Caché local que resguarda la lista total de tutores activos recuperados desde la memoria central. */
+    private List<Tutor> tutoresActuales;
 
+    /**
+     * Construye el panel de búsqueda configurando los contenedores de controles, la barra de
+     * herramientas superior y los listeners encargados del monitoreo de texto.
+     *
+     * @param navegador Instancia global del despachador de vistas del sistema.
+     */
     public PanelBusqueda(Navegador navegador) {
-        this.navegador     = navegador;
+        this.navegador = navegador;
         this.panelTarjetas = new JPanel();
         this.campoBusqueda = new JTextField();
 
@@ -34,21 +52,31 @@ public class PanelBusqueda extends JPanel {
         setBackground(Tema.FONDO);
         add(crearEncabezado(), BorderLayout.NORTH);
         add(new JScrollPane(panelTarjetas), BorderLayout.CENTER);
-        add(crearBotones(),    BorderLayout.SOUTH);
+        add(crearBotones(), BorderLayout.SOUTH);
 
         panelTarjetas.setBackground(Tema.FONDO);
         refrescarTutores();
     }
 
-    // ── API pública ──────────────────────────────────────────
-
+    /**
+     * Sincroniza la lista interna del panel consultando el estado vigente de los tutores en el
+     * GestorDatos y restablece el campo de filtrado visualizando la totalidad de los registros.
+     */
     public void refrescarTutores() {
         tutoresActuales = GestorDatos.getInstancia().getTutores();
         filtrarYMostrar("");
     }
 
-    // ── Construcción UI ──────────────────────────────────────
-
+    /**
+     * Diseña la barra de herramientas del extremo superior (Zona Norte) fijando el título del
+     * módulo y el control de búsqueda textual.
+     *
+     * El campo de texto incorpora un listener reactivo vinculado a su documento interno. Cualquier
+     * inserción, remoción o modificación de caracteres gatilla de manera inmediata el recalculo
+     * de la lista visible sin requerir confirmaciones por teclado o clics adicionales.
+     *
+     * @return El panel contenedor del encabezado con sus estilos de margen aplicados.
+     */
     private JPanel crearEncabezado() {
         JPanel p = new JPanel(new BorderLayout(Tema.PADDING, 0));
         p.setBackground(Tema.PRIMARIO);
@@ -62,22 +90,26 @@ public class PanelBusqueda extends JPanel {
         campoBusqueda.setPreferredSize(new Dimension(250, 34));
         campoBusqueda.putClientProperty("JTextField.placeholderText", "Filtrar por materia...");
         campoBusqueda.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            public void insertUpdate(javax.swing.event.DocumentEvent e)  { filtrar(); }
-            public void removeUpdate(javax.swing.event.DocumentEvent e)  { filtrar(); }
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { filtrar(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { filtrar(); }
             public void changedUpdate(javax.swing.event.DocumentEvent e) { filtrar(); }
             private void filtrar() { filtrarYMostrar(campoBusqueda.getText().trim()); }
         });
 
-        p.add(titulo,        BorderLayout.WEST);
+        p.add(titulo, BorderLayout.WEST);
         p.add(campoBusqueda, BorderLayout.EAST);
         return p;
     }
 
+    /**
+     * Modela la botonera inferior de salida (Zona Sur) encargada de proveer rutas alternativas de navegación.
+     *
+     * @return Panel inferior dotado de un botón de retorno rápido al menú principal.
+     */
     private JPanel crearBotones() {
         JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT));
         p.setBackground(Tema.FONDO);
-        p.setBorder(new EmptyBorder(Tema.PADDING_PEQUEÑO, Tema.PADDING,
-                Tema.PADDING_PEQUEÑO, Tema.PADDING));
+        p.setBorder(new EmptyBorder(Tema.PADDING_PEQUEÑO, Tema.PADDING, Tema.PADDING_PEQUEÑO, Tema.PADDING));
         JButton btnVolver = new JButton("← Volver");
         btnVolver.setFont(Tema.FUENTE_BOTON);
         btnVolver.setBackground(Tema.TEXTO_SECUNDARIO);
@@ -91,6 +123,16 @@ public class PanelBusqueda extends JPanel {
         return p;
     }
 
+    /**
+     * Discrimina los registros de la caché basándose en la cadena provista, vacía el lienzo
+     * actual y recompone las tarjetas que superaron los criterios de búsqueda.
+     *
+     * Si tras procesar el filtro no se hallan coincidencias con los parámetros del usuario,
+     * el layout conmuta de forma segura a una disposición unidireccional (BorderLayout) para
+     * centrar un mensaje de advertencia pasivo que notifica la ausencia de resultados.
+     *
+     * @param filtro Texto plano que representa el criterio de búsqueda (materia o nombre).
+     */
     private void filtrarYMostrar(String filtro) {
         List<Tutor> filtrados = new ArrayList<>();
         for (Tutor t : tutoresActuales) {
@@ -103,8 +145,7 @@ public class PanelBusqueda extends JPanel {
 
         panelTarjetas.removeAll();
         panelTarjetas.setLayout(new GridLayout(0, 2, Tema.PADDING, Tema.PADDING));
-        panelTarjetas.setBorder(new EmptyBorder(Tema.PADDING, Tema.PADDING,
-                Tema.PADDING, Tema.PADDING));
+        panelTarjetas.setBorder(new EmptyBorder(Tema.PADDING, Tema.PADDING, Tema.PADDING, Tema.PADDING));
 
         if (filtrados.isEmpty()) {
             JLabel vacio = new JLabel("No se encontraron tutores.", SwingConstants.CENTER);
@@ -122,6 +163,20 @@ public class PanelBusqueda extends JPanel {
         panelTarjetas.repaint();
     }
 
+    /**
+     * Construye un componente modular en forma de tarjeta contenedor para desplegar de forma
+     * compacta la información de un tutor.
+     *
+     * La tarjeta agrupa el nombre, la especialidad técnica y el área de afinidad en un bloque
+     * descriptivo superior, mientras que en la base calcula dinámicamente la tarifa por hora
+     * estructurada junto con el saldo total de bloques de tiempo desocupados.
+     *
+     * El botón de acción enlaza al tutor con la instancia del Proxy global antes de instruir
+     * al navegador el despliegue del calendario de reservas.
+     *
+     * @param tutor Objeto entidad de donde se extraen los atributos del perfil.
+     * @return El subpanel estructurado con la información y acciones del tutor.
+     */
     private JPanel crearTarjetaTutor(Tutor tutor) {
         JPanel tarjeta = new JPanel(new BorderLayout(0, 8));
         tarjeta.setBackground(Tema.FONDO_TARJETA);
@@ -130,7 +185,6 @@ public class PanelBusqueda extends JPanel {
                 new EmptyBorder(Tema.PADDING, Tema.PADDING, Tema.PADDING, Tema.PADDING)));
         tarjeta.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
-        // Encabezado de la tarjeta
         JPanel header = new JPanel(new BorderLayout());
         header.setBackground(Tema.FONDO_TARJETA);
 
@@ -155,7 +209,6 @@ public class PanelBusqueda extends JPanel {
 
         header.add(textos, BorderLayout.CENTER);
 
-        // Info inferior
         JPanel footer = new JPanel(new BorderLayout());
         footer.setBackground(Tema.FONDO_TARJETA);
 
@@ -178,7 +231,7 @@ public class PanelBusqueda extends JPanel {
             navegador.mostrarCalendario();
         });
 
-        footer.add(infoTarifa,    BorderLayout.WEST);
+        footer.add(infoTarifa, BorderLayout.WEST);
         footer.add(btnSeleccionar, BorderLayout.EAST);
 
         tarjeta.add(header, BorderLayout.CENTER);

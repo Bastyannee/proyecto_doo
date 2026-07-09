@@ -1,20 +1,17 @@
 package vista.proxy;
 
 /**
- * Esta interfaz es el contrato común entre el Tutor real y nuestro ProxyTutor.
- * Su propósito es que los paneles de la interfaz gráfica puedan interactuar con
- * cualquiera de los dos sin notar la diferencia
+ * Contrato de diseño común y unificado entre las entidades reales de tipo Tutor
+ * y sus representaciones estructurales diferidas mediante ProxyTutor.
  *
- * La creé específicamente para la capa visual. En lugar de exponer toda la
- * información interna del Tutor, aquí solo definimos los datos exactos que la UI
- * necesita mostrar. Así mantenemos nuestro modelo de dominio limpio y completamente
- * separado de la vista.
+ * El propósito medular de esta interfaz consiste en proveer un desacoplamiento completo
+ * a la capa visual del sistema, permitiendo que los diferentes subpaneles interactúen
+ * con cualquiera de las dos implementaciones de manera polimórfica y completamente transparente.
  *
- * para bastian:
- * Para conectar tu parte con la mía, necesito que tu clase Tutor implemente
- * esta interfaz. Como los métodos requeridos ya los tienes programados en tu clase,
- * el único cambio que debes hacer es agregar el "implements" en la declaración:
- * * public class Tutor implements PerfilSeleccionable { ... }
+ * Esta abstracción fue diseñada específicamente para optimizar el consumo de la interfaz gráfica:
+ * en lugar de comprometer u obligar a la vista a conocer las complejidades y relaciones internas del
+ * modelo de dominio Tutor, define estrictamente las consultas operativas indispensables para poblar las
+ * tarjetas, listados y agendas de la interfaz de usuario.
  */
 public interface PerfilSeleccionable {
 
@@ -43,11 +40,12 @@ public interface PerfilSeleccionable {
     int getMaxEstudiantes();
 
     /**
-     * Consulta si el tutor está disponible en un día y bloque.
+     * Consulta el estado de disponibilidad del perfil evaluando las coordenadas de su matriz
+     * de tiempos en un día y bloque cronológico específicos.
      *
-     * @param dia    índice del día (0=Lunes ... 4=Viernes)
-     * @param bloque índice del bloque horario (0=08:00 ... 7=17:00)
-     * @return true si el tutor tiene ese bloque disponible
+     * @param dia Índice posicional representativo del día evaluado (0 para Lunes hasta 4 para Viernes).
+     * @param bloque Índice posicional del rango horario evaluado (0 para las 08:00 hasta 7 para las 17:00).
+     * @return Verdadero (true) si el tutor posee vacantes libres u horarios hábiles para la reserva en ese cuadrante.
      */
     boolean isDisponible(int dia, int bloque);
 }

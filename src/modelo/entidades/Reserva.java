@@ -5,62 +5,26 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Representa una reserva de tutoría confirmada en el Sistema de Reservas de
- * Clases Particulares.
+ * Representa una reserva de tutoría confirmada en el Sistema de Reservas de Clases Particulares.
  *
- * <p>Una {@code Reserva} es el resultado concreto de que el administrador
- * procese una {@link Solicitud} a través del {@code ComandoAgendar}.  Asocia
- * de forma definitiva a un {@link Estudiante} con un {@link Tutor} en un
- * bloque horario específico de la semana.</p>
+ * Es el resultado concreto de procesar una Solicitud a través del administrador.
+ * Asocia de forma definitiva a un Estudiante con un Tutor en un bloque horario
+ * específico de una fecha determinada.
  *
- * <p>El bloque queda identificado por tres referencias complementarias:</p>
- * <ul>
- *   <li>{@link #diaIndex} – índice del día (0 = Lunes … 4 = Viernes), coherente
- *       con la primera dimensión de las matrices de disponibilidad.</li>
- *   <li>{@link #bloqueIndex} – índice del bloque horario (0–5), coherente con
- *       la segunda dimensión de las matrices.</li>
- *   <li>{@link #fecha} – fecha concreta ({@link LocalDate}) en que se realizará
- *       la clase, que permite al sistema mantener el calendario con vistas
- *       filtradas por tutor o estudiante.</li>
- * </ul>
+ * El bloque se identifica por tres referencias coherentes con el sistema:
+ * - diaIndex: Índice del día (0 = Lunes a 4 = Viernes), usado en las filas de la matriz.
+ * - bloqueIndex: Índice del bloque horario (0 a 5), usado en las columnas de la matriz.
+ * - fecha: Instancia de LocalDate en que se realizará físicamente la tutoría.
  *
- * <p>La reserva expone los métodos de utilidad {@link #isActiva()} y
- * {@link #conflictaCon(Reserva)} que el {@code GestorDatos} usa para prevenir
- * solapamientos horarios antes de confirmar una nueva reserva.</p>
- *
- * <p>El estado lo gestiona el administrador mediante
- * {@link #setEstado(EstadoReserva)} o a través de los comandos del
- * controlador:</p>
- * <pre>
- *   CONFIRMADA ──► CANCELADA  (via ComandoCancelar / deshacer)
- *              └─► ARCHIVADA  (via ComandoArchivar, clase ya realizada)
- * </pre>
- *
- * <p>Invariantes de clase:</p>
- * <ul>
- *   <li>{@code tutor}, {@code estudiante}, {@code solicitudOrigen} y
- *       {@code fecha} nunca son {@code null}.</li>
- *   <li>{@code diaIndex} ∈ [0, {@value ConstantesHorario#DIAS} − 1].</li>
- *   <li>{@code bloqueIndex} ∈ [0, {@value ConstantesHorario#BLOQUES} − 1].</li>
- *   <li>{@code estado} nunca es {@code null}.</li>
- *   <li>{@code id} es inmutable durante toda la vida del objeto.</li>
- * </ul>
- *
- * @author  Bastián
- * @version 1.0
- * @see     Tutor
- * @see     Estudiante
- * @see     Solicitud
- * @see     ConstantesHorario
+ * Invariantes de la clase:
+ * - El tutor, estudiante, solicitudOrigen y fecha nunca pueden ser nulos.
+ * - Los índices de día y bloque deben estar dentro de los límites de ConstantesHorario.
+ * - El ID único se autogenera en la construcción y es inmutable.
  */
 public class Reserva {
 
-    // -------------------------------------------------------------------------
-    // Enumeración de estado
-    // -------------------------------------------------------------------------
-
     /**
-     * Estados posibles durante el ciclo de vida de una {@code Reserva}.
+     * Estados posibles durante el ciclo de vida de una Reserva.
      */
     public enum EstadoReserva {
 
@@ -71,9 +35,7 @@ public class Reserva {
         CONFIRMADA,
 
         /**
-         * La tutoría fue cancelada antes de realizarse, ya sea por el
-         * administrador, el tutor o el estudiante.  Una reserva cancelada
-         * libera el bloque horario del tutor en el sistema.
+         * La tutoría fue cancelada. Libera el bloque horario del tutor en el sistema.
          */
         CANCELADA,
 
@@ -84,32 +46,27 @@ public class Reserva {
         ARCHIVADA
     }
 
-    // -------------------------------------------------------------------------
-    // Atributos
-    // -------------------------------------------------------------------------
-
     /**
-     * Identificador único de la reserva, generado automáticamente como UUID
-     * en la construcción.  Inmutable.
+     * Identificador único autogenerado de la reserva (UUID). Inmutable.
      */
     private final String id;
 
     /**
-     * Tutor asignado a la tutoría.  Referencia inmutable.
+     * Tutor asignado a la tutoría. Referencia inmutable.
      * Nunca {@code null}.
      */
     private final Tutor tutor;
 
     /**
-     * Estudiante asignado a la tutoría.  Referencia inmutable.
+     * Estudiante asignado a la tutoría. Referencia inmutable.
      * Nunca {@code null}.
      */
     private final Estudiante estudiante;
 
     /**
-     * Solicitud que originó esta reserva.  Permite trazabilidad del proceso
+     * Solicitud que originó esta reserva. Permite trazabilidad del proceso
      * administrativo y es usada por el patrón Command para revertir la
-     * operación en {@code deshacer()}.  Referencia inmutable.
+     * operación en {@code deshacer()}. Referencia inmutable.
      * Nunca {@code null}.
      */
     private final Solicitud solicitudOrigen;
@@ -141,47 +98,34 @@ public class Reserva {
      */
     private EstadoReserva estado;
 
-    // -------------------------------------------------------------------------
-    // Constructor
-    // -------------------------------------------------------------------------
-
     /**
-     * Crea una nueva {@code Reserva} en estado {@link EstadoReserva#CONFIRMADA}.
+     * Crea una nueva Reserva inicializada en estado CONFIRMADA.
      *
-     * <p>Este constructor es llamado exclusivamente por {@code ComandoAgendar}
-     * después de verificar que no existe conflicto horario en
-     * {@code GestorDatos}.</p>
+     * Este constructor se invoca tras validar que no existan topes de horario
+     * con el tutor asignado.
      *
-     * @param tutor           tutor asignado; no puede ser {@code null}
-     * @param estudiante      estudiante asignado; no puede ser {@code null}
-     * @param solicitudOrigen solicitud que originó la reserva; no puede ser
-     *                        {@code null}
-     * @param fecha           fecha concreta de la tutoría; no puede ser
-     *                        {@code null}
-     * @param diaIndex        índice del día (0–{@value ConstantesHorario#DIAS}−1)
-     * @param bloqueIndex     índice del bloque (0–{@value ConstantesHorario#BLOQUES}−1)
-     * @throws IllegalArgumentException si algún parámetro obligatorio es
-     *                                  {@code null} o si los índices están
-     *                                  fuera de rango
+     * @param tutor Tutor asignado a la clase.
+     * @param estudiante Estudiante que recibirá la clase.
+     * @param solicitudOrigen Solicitud base que originó la reserva.
+     * @param fecha Fecha del calendario de la tutoría.
+     * @param diaIndex Índice de la fila (0 a 4).
+     * @param bloqueIndex Índice de la columna (0 a 5).
+     * @throws IllegalArgumentException Si algún objeto es nulo o los índices quedan fuera del rango válido.
      */
     public Reserva(Tutor tutor, Estudiante estudiante, Solicitud solicitudOrigen,
                    LocalDate fecha, int diaIndex, int bloqueIndex) {
 
         validarParametros(tutor, estudiante, solicitudOrigen, fecha, diaIndex, bloqueIndex);
 
-        this.id              = UUID.randomUUID().toString();
-        this.tutor           = tutor;
-        this.estudiante      = estudiante;
+        this.id = UUID.randomUUID().toString();
+        this.tutor = tutor;
+        this.estudiante = estudiante;
         this.solicitudOrigen = solicitudOrigen;
-        this.fecha           = fecha;
-        this.diaIndex        = diaIndex;
-        this.bloqueIndex     = bloqueIndex;
-        this.estado          = EstadoReserva.CONFIRMADA;
+        this.fecha = fecha;
+        this.diaIndex = diaIndex;
+        this.bloqueIndex = bloqueIndex;
+        this.estado = EstadoReserva.CONFIRMADA;
     }
-
-    // -------------------------------------------------------------------------
-    // Getters
-    // -------------------------------------------------------------------------
 
     /**
      * Retorna el identificador único e inmutable de la reserva.
@@ -213,9 +157,9 @@ public class Reserva {
     /**
      * Retorna la solicitud que originó esta reserva.
      *
-     * <p>Es utilizada por el patrón Command durante la operación
+     * Es utilizada por el patrón Command durante la operación
      * {@code deshacer()} para restaurar la solicitud a estado
-     * {@link Solicitud.EstadoSolicitud#PENDIENTE}.</p>
+     * {@link Solicitud.EstadoSolicitud#PENDIENTE}.
      *
      * @return referencia inmutable a la {@link Solicitud}; nunca {@code null}
      */
@@ -236,8 +180,7 @@ public class Reserva {
      * Retorna el índice del día de la semana de esta reserva, compatible con
      * la primera dimensión de las matrices de disponibilidad.
      *
-     * @return valor entre 0 (Lunes) y {@value ConstantesHorario#DIAS} − 1
-     *         (Viernes)
+     * @return valor entre 0 (Lunes) y {@value ConstantesHorario#DIAS} − 1 (Viernes)
      */
     public int getDiaIndex() {
         return diaIndex;
@@ -257,7 +200,7 @@ public class Reserva {
      * Retorna el nombre del día de la semana correspondiente a
      * {@link #diaIndex}, usando las etiquetas de {@link ConstantesHorario}.
      *
-     * @return nombre del día (p. ej., "Lunes", "Miércoles")
+     * @return nombre del día
      */
     public String getNombreDia() {
         return ConstantesHorario.NOMBRES_DIAS[diaIndex];
@@ -267,11 +210,7 @@ public class Reserva {
      * Retorna la descripción textual del bloque horario correspondiente a
      * {@link #bloqueIndex}, usando las etiquetas de {@link ConstantesHorario}.
      *
-     * <p>Este método satisface el atributo {@code hora} especificado en el
-     * enunciado del proyecto, derivándolo del índice de bloque para evitar
-     * redundancia de datos.</p>
-     *
-     * @return rango horario (p. ej., {@code "08:00 - 09:30"})
+     * @return rango horario
      */
     public String getHora() {
         return ConstantesHorario.NOMBRES_BLOQUES[bloqueIndex];
@@ -286,18 +225,11 @@ public class Reserva {
         return estado;
     }
 
-    // -------------------------------------------------------------------------
-    // Setters con validación
-    // -------------------------------------------------------------------------
-
     /**
-     * Actualiza la fecha concreta de la tutoría.
+     * Actualiza la fecha de la tutoría si se requiere una reagendación.
      *
-     * <p>Sólo el administrador debería invocar este método para reagendar una
-     * clase; el bloque (día e índice) permanece inmutable.</p>
-     *
-     * @param fecha nueva fecha; no puede ser {@code null}
-     * @throws IllegalArgumentException si {@code fecha} es {@code null}
+     * @param fecha Nueva fecha asignada.
+     * @throws IllegalArgumentException Si la fecha recibida es nula.
      */
     public void setFecha(LocalDate fecha) {
         if (fecha == null)
@@ -308,12 +240,8 @@ public class Reserva {
     /**
      * Actualiza el estado de la reserva.
      *
-     * <p>Normalmente esta operación la realizan los comandos del controlador
-     * ({@code ComandoAgendar}, {@code ComandoArchivar}) para mantener el
-     * historial de operaciones deshacer/rehacer.</p>
-     *
-     * @param estado nuevo estado; no puede ser {@code null}
-     * @throws IllegalArgumentException si {@code estado} es {@code null}
+     * @param estado Nuevo estado del ciclo de vida.
+     * @throws IllegalArgumentException Si el estado recibido es nulo.
      */
     public void setEstado(EstadoReserva estado) {
         if (estado == null)
@@ -321,44 +249,24 @@ public class Reserva {
         this.estado = estado;
     }
 
-    // -------------------------------------------------------------------------
-    // Métodos de utilidad
-    // -------------------------------------------------------------------------
-
     /**
-     * Indica si la reserva está activa (programada y sin cancelar).
+     * Evalúa si la reserva se encuentra activa (sin cancelar).
      *
-     * <p>El {@code GestorDatos} usa este método durante la verificación
-     * de conflictos horarios antes de registrar una nueva reserva.</p>
-     *
-     * @return {@code true} si el estado es {@link EstadoReserva#CONFIRMADA}
+     * @return true si el estado actual es CONFIRMADA.
      */
     public boolean isActiva() {
         return estado == EstadoReserva.CONFIRMADA;
     }
 
     /**
-     * Verifica si esta reserva genera un conflicto horario con otra reserva
-     * existente.
+     * Verifica si esta reserva se cruza en horario y tutor con otra reserva activa.
      *
-     * <p>Existe conflicto cuando ambas reservas están {@link #isActiva() activas},
-     * comparten el mismo {@link Tutor} y ocupan el mismo bloque de día e
-     * índice.  El {@code GestorDatos} debe invocar este método sobre todas
-     * las reservas activas antes de confirmar una nueva.</p>
+     * Se considera conflicto si ambas están activas, comparten el mismo tutor
+     * y coinciden en el mismo día y bloque.
      *
-     * <pre>{@code
-     * // Ejemplo de uso en GestorDatos
-     * for (Reserva r : reservas) {
-     *     if (nueva.conflictaCon(r)) {
-     *         throw new ConflictoHorarioException("El tutor ya tiene clase asignada.");
-     *     }
-     * }
-     * }</pre>
-     *
-     * @param otra reserva contra la que se compara; no puede ser {@code null}
-     * @return {@code true} si hay solapamiento de tutor, día y bloque entre
-     *         dos reservas activas
-     * @throws IllegalArgumentException si {@code otra} es {@code null}
+     * @param otra La otra reserva para verificar solapamiento.
+     * @return true si existe un cruce de horarios activo.
+     * @throws IllegalArgumentException Si la reserva a comparar es nula.
      */
     public boolean conflictaCon(Reserva otra) {
         if (otra == null)
@@ -373,27 +281,19 @@ public class Reserva {
     }
 
     /**
-     * Genera una descripción compacta de la clase programada, útil para la
-     * capa de vista en el calendario.
+     * Genera un resumen textual breve que vincula los nombres e información de la cita.
      *
-     * @return cadena con tutor, estudiante, día y hora
-     *         (p. ej., {@code "Ana López → Pedro Soto | Lunes 08:00-09:30"})
+     * @return Texto formateado con tutor, estudiante, día y hora.
      */
     public String resumen() {
         return String.format("%s → %s | %s %s",
             tutor.getNombre(), estudiante.getNombre(), getNombreDia(), getHora());
     }
 
-    // -------------------------------------------------------------------------
-    // Métodos auxiliares privados
-    // -------------------------------------------------------------------------
-
     /**
      * Valida todos los parámetros obligatorios del constructor.
      */
-    private static void validarParametros(Tutor tutor, Estudiante estudiante,
-                                          Solicitud solicitudOrigen, LocalDate fecha,
-                                          int diaIndex, int bloqueIndex) {
+    private static void validarParametros(Tutor tutor, Estudiante estudiante, Solicitud solicitudOrigen, LocalDate fecha, int diaIndex, int bloqueIndex) {
         if (tutor == null)
             throw new IllegalArgumentException("El tutor de la reserva no puede ser nulo.");
         if (estudiante == null)
@@ -411,10 +311,6 @@ public class Reserva {
                 "Índice de bloque fuera de rango: %d (rango válido: 0–%d).",
                 bloqueIndex, ConstantesHorario.BLOQUES - 1));
     }
-
-    // -------------------------------------------------------------------------
-    // Sobreescritura de Object
-    // -------------------------------------------------------------------------
 
     /**
      * Dos instancias de {@code Reserva} son iguales si comparten el mismo

@@ -5,39 +5,30 @@ import controlador.eventos.Observador;
 import modelo.entidades.Tutor;
 
 /**
- * Proxy virtual del tutor actualmente seleccionado en la aplicación.
+ * Proxy virtual que representa de manera diferida al tutor actualmente seleccionado
+ * en el entorno de la aplicación.
  *
- * PATRÓN PROXY (Virtual):
- * ProxyTutor implementa PerfilSeleccionable igual que Tutor, por lo
- * que cualquier panel que trabaje con PerfilSeleccionable puede recibir
- * un ProxyTutor sin saberlo. Cuando el admin selecciona otro tutor en
- * la lista, no se recargan todos los paneles manualmente: simplemente
- * se llama a seleccionar(tutor) y el proxy redirige todas las llamadas
- * al nuevo tutor, notificando automáticamente a los paneles registrados.
+ * Arquitectura basada en Patrón Proxy (Virtual):
+ * ProxyTutor implementa la interfaz PerfilSeleccionable de forma homóloga a la clase Tutor.
+ * Gracias a esto, cualquier componente o subpanel visual parametrizado con PerfilSeleccionable
+ * puede consumir esta clase de manera transparente. Al conmutar el perfil activo, se evita la
+ * re-instanciación manual o el refresco acoplado de las vistas: basta con invocar el método
+ * seleccionar(tutor) para redirigir las delegaciones de datos internas y disparar las alertas
+ * a la UI de forma automática.
  *
- * PATRÓN SINGLETON:
- * Existe exactamente una instancia en toda la aplicación porque solo
- * hay un "tutor seleccionado" en un momento dado. Múltiples instancias
- * generarían inconsistencias entre paneles.
+ * Restricción de Instancia (Patrón Singleton):
+ * Garantiza la existencia de una única referencia global a lo largo del ciclo de vida de la
+ * aplicación, asegurando la consistencia del estado de selección unificado entre múltiples
+ * pantallas concurrentes.
  *
- * INTEGRACIÓN CON OBSERVER:
- * ProxyTutor extiende SujetoObservable, heredando la gestión de
- * observadores y la notificación. Cuando cambia el tutor activo,
- * llama a notificarObservadores() y cada panel registrado recibe
- * actualizar() y ejecuta repaint() automáticamente.
- *
- * FLUJO COMPLETO:
- *   Admin hace clic en tutor de la lista
- *     → PanelDirectorio llama: ProxyTutor.getInstancia().seleccionar(tutor)
- *     → ProxyTutor actualiza tutorActual
- *     → SujetoObservable.notificarObservadores() avisa a cada panel
- *     → Cada panel refresca su contenido y llama repaint()
+ * Integración con el Patrón Observer:
+ * Al extender de SujetoObservable, esta clase hereda los mecanismos de suscripción y despacho.
+ * Cada modificación en el tutor de referencia gatilla la rutina notificarObservadores(),
+ * provocando la actualización reactiva y el re-pintado automático de los paneles acoplados.
  */
 public class ProxyTutor extends SujetoObservable implements PerfilSeleccionable {
 
-    // Singleton
-    // =========================================================
-
+    /** Instancia única y compartida del proxy virtual. */
     private static ProxyTutor instancia;
 
     /**
@@ -66,14 +57,8 @@ public class ProxyTutor extends SujetoObservable implements PerfilSeleccionable 
         return instancia;
     }
 
-    // Estado del Proxy
-    // =========================================================
-
     /** El tutor real actualmente seleccionado. */
     private Tutor tutorActual;
-
-    // Operación central del Proxy
-    // =========================================================
 
     /**
      * Selecciona un tutor como el perfil activo de la aplicación
@@ -107,12 +92,6 @@ public class ProxyTutor extends SujetoObservable implements PerfilSeleccionable 
     public boolean hayTutorSeleccionado() {
         return tutorActual != null;
     }
-
-    // Implementación de PerfilSeleccionable — delegación al real
-    // =========================================================
-    // Cada metodo verifica que haya tutor antes de delegar.
-    // Si no hay tutor seleccionado, devuelve valores neutros para
-    // que los paneles puedan inicializarse vacíos sin NullPointerException.
 
     @Override
     public String getId() {

@@ -1,36 +1,18 @@
 package modelo.entidades;
 
 /**
- * Constantes inmutables del modelo de horario semanal para el Sistema de
- * Reservas de Clases Particulares.
+ * Constantes inmutables del modelo de horario semanal para el Sistema de Reservas.
  *
- * <p>Define las dimensiones de la matriz de disponibilidad
- * {@code boolean[DIAS][BLOQUES]} y los nombres descriptivos de cada día y
- * bloque horario. Toda clase que opere sobre matrices de horario debe referirse
- * exclusivamente a estas constantes para garantizar coherencia en el sistema.</p>
+ * Define las dimensiones y etiquetas para manejar la matriz de disponibilidad
+ * del sistema, estructurada como: boolean[DIAS][BLOQUES].
  *
- * <p>Estructura de la matriz:</p>
- * <pre>
- *             Bloque 0       Bloque 1       Bloque 2       Bloque 3       Bloque 4       Bloque 5
- *           08:00-09:30    09:30-11:00    11:00-12:30    13:00-14:30    14:30-16:00    16:00-17:30
- * Lunes   [  true/false  |  true/false  |  true/false  |  true/false  |  true/false  |  true/false ]
- * Martes  [  true/false  |  ...                                                                    ]
- * Miérc.  [  ...                                                                                   ]
- * Jueves  [  ...                                                                                   ]
- * Viernes [  ...                                                                                   ]
- * </pre>
+ * Distribución de la matriz:
+ * - Filas (dias): Representan los días laborales de Lunes a Viernes (índices 0 a 4).
+ * - Columnas (bloques): Representan los tramos horarios desde las 08:00 hasta las 17:30 (índices 0 a 5).
  *
- * <p>Esta clase no puede ser instanciada; todas sus constantes son estáticas
- * y finales.</p>
- *
- * @author  Bastián
- * @version 1.0
+ * Esta clase es estrictamente utilitaria y no puede ser instanciada.
  */
 public final class ConstantesHorario {
-
-    // -------------------------------------------------------------------------
-    // Dimensiones de la matriz
-    // -------------------------------------------------------------------------
 
     /**
      * Número de días laborales que componen las filas de la matriz.
@@ -44,24 +26,9 @@ public final class ConstantesHorario {
      */
     public static final int BLOQUES = 6;
 
-    // -------------------------------------------------------------------------
-    // Etiquetas descriptivas
-    // -------------------------------------------------------------------------
-
     /**
-     * Nombres de los días laborales indexados de {@code 0} a {@code DIAS - 1}.
-     *
-     * <pre>
-     *   NOMBRES_DIAS[0] → "Lunes"
-     *   NOMBRES_DIAS[1] → "Martes"
-     *   NOMBRES_DIAS[2] → "Miércoles"
-     *   NOMBRES_DIAS[3] → "Jueves"
-     *   NOMBRES_DIAS[4] → "Viernes"
-     * </pre>
-     *
-     * <p><b>Nota:</b> El arreglo es público para facilitar su uso en la capa
-     * de vista (renderización de la grilla de horarios), pero sus elementos
-     * son cadenas inmutables en Java, por lo que no existe riesgo de mutación.</p>
+     * Nombres descriptivos de los días laborales en orden cronológico.
+     * Útil para renderizar los encabezados de las filas en la interfaz visual.
      */
     public static final String[] NOMBRES_DIAS = {
         "Lunes",
@@ -72,17 +39,8 @@ public final class ConstantesHorario {
     };
 
     /**
-     * Etiquetas de los bloques horarios indexados de {@code 0} a
-     * {@code BLOQUES - 1}.
-     *
-     * <pre>
-     *   NOMBRES_BLOQUES[0] → "08:00 - 09:30"
-     *   NOMBRES_BLOQUES[1] → "09:30 - 11:00"
-     *   NOMBRES_BLOQUES[2] → "11:00 - 12:30"
-     *   NOMBRES_BLOQUES[3] → "13:00 - 14:30"
-     *   NOMBRES_BLOQUES[4] → "14:30 - 16:00"
-     *   NOMBRES_BLOQUES[5] → "16:00 - 17:30"
-     * </pre>
+     * Rangos horarios correspondientes a cada bloque del sistema.
+     * Útil para mostrar las horas exactas de cada clase en la interfaz visual.
      */
     public static final String[] NOMBRES_BLOQUES = {
         "08:00 - 09:30",
@@ -93,15 +51,11 @@ public final class ConstantesHorario {
         "16:00 - 17:30"
     };
 
-    // -------------------------------------------------------------------------
-    // Constructor privado (clase utilitaria no instanciable)
-    // -------------------------------------------------------------------------
-
     /**
-     * Constructor privado que impide la instanciación directa de esta clase
-     * utilitaria.
+     * Constructor privado que previene la creación de instancias.
+     * Lanza una excepción si se intenta acceder mediante reflexión.
      *
-     * @throws UnsupportedOperationException siempre, al intentar instanciarla
+     * @throws UnsupportedOperationException siempre que se intente invocar
      */
     private ConstantesHorario() {
         throw new UnsupportedOperationException(
