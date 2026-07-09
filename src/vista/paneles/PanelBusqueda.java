@@ -6,10 +6,14 @@ import vista.Navegador;
 import vista.Tema;
 import vista.proxy.ProxyTutor;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -185,8 +189,10 @@ public class PanelBusqueda extends JPanel {
                 new EmptyBorder(Tema.PADDING, Tema.PADDING, Tema.PADDING, Tema.PADDING)));
         tarjeta.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
-        JPanel header = new JPanel(new BorderLayout());
+        JPanel header = new JPanel(new BorderLayout(Tema.PADDING, 0));
         header.setBackground(Tema.FONDO_TARJETA);
+
+        JLabel foto = crearFoto(tutor);
 
         JLabel nombre = new JLabel(tutor.getNombre());
         nombre.setFont(Tema.FUENTE_SUBTITULO);
@@ -207,7 +213,19 @@ public class PanelBusqueda extends JPanel {
         textos.add(materia);
         textos.add(afinidad);
 
+        header.add(foto, BorderLayout.WEST);
         header.add(textos, BorderLayout.CENTER);
+
+        JLabel descripcion = new JLabel(
+                "<html><body style='width:300px'>" + tutor.getDescripcion() + "</body></html>");
+        descripcion.setFont(Tema.FUENTE_PEQUENA);
+        descripcion.setForeground(Tema.TEXTO_SECUNDARIO);
+        descripcion.setBorder(new EmptyBorder(Tema.PADDING_PEQUEÑO, 0, 0, 0));
+
+        JPanel cuerpo = new JPanel(new BorderLayout());
+        cuerpo.setBackground(Tema.FONDO_TARJETA);
+        cuerpo.add(header, BorderLayout.NORTH);
+        cuerpo.add(descripcion, BorderLayout.CENTER);
 
         JPanel footer = new JPanel(new BorderLayout());
         footer.setBackground(Tema.FONDO_TARJETA);
@@ -234,9 +252,77 @@ public class PanelBusqueda extends JPanel {
         footer.add(infoTarifa, BorderLayout.WEST);
         footer.add(btnSeleccionar, BorderLayout.EAST);
 
-        tarjeta.add(header, BorderLayout.CENTER);
+        tarjeta.add(cuerpo, BorderLayout.CENTER);
         tarjeta.add(footer, BorderLayout.SOUTH);
 
         return tarjeta;
+    }
+
+    /**
+     * Carga la foto del tutor desde los recursos y la escala al tamaño del contenedor,
+     * recortando el centro para mantener la proporción original sin distorsionarla.
+     *
+     * Si la ruta no existe o falla al cargar, devuelve un recuadro con las
+     * iniciales del tutor como alternativa.
+     *
+     * @param tutor El tutor del cual se obtiene la foto y sus iniciales.
+     * @return Un JLabel con la imagen lista para ser añadida a la interfaz.
+     */
+    private JLabel crearFoto(Tutor tutor) {
+        int size = 120;
+        BufferedImage imagen = null;
+
+        if (tutor.getFotoPath() != null && !tutor.getFotoPath().isEmpty()) {
+            try {
+                imagen = ImageIO.read(new File(tutor.getFotoPath()));
+            } catch (IOException ignored) {}
+        }
+
+        BufferedImage cuadro = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = cuadro.createGraphics();
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+
+        if (imagen != null) {
+            int origAncho = imagen.getWidth();
+            int origAlto = imagen.getHeight();
+            int lado = Math.min(origAncho, origAlto);
+            int x = (origAncho - lado) / 2;
+            int y = (origAlto - lado) / 2;
+            BufferedImage recorte = imagen.getSubimage(x, y, lado, lado);
+            g2.drawImage(recorte.getScaledInstance(size, size, Image.SCALE_SMOOTH), 0, 0, null);
+        } else {
+            g2.setColor(Tema.PRIMARIO);
+            g2.fillRect(0, 0, size, size);
+            g2.setColor(Color.WHITE);
+            g2.setFont(new Font("Segoe UI", Font.BOLD, 16));
+            FontMetrics fm = g2.getFontMetrics();
+            String iniciales = obtenerIniciales(tutor.getNombre());
+            g2.drawString(iniciales,
+                    (size - fm.stringWidth(iniciales)) / 2,
+                    (size - fm.getHeight()) / 2 + fm.getAscent());
+        }
+        g2.dispose();
+
+        JLabel label = new JLabel(new ImageIcon(cuadro));
+        label.setPreferredSize(new Dimension(size + 8, size + 8));
+        label.setHorizontalAlignment(SwingConstants.CENTER);
+        return label;
+    }
+
+    /**
+     * Genera las iniciales del tutor tomando la primera letra de sus dos primeras palabras.
+     * Si el nombre tiene una sola palabra, devuelve solo esa inicial en mayúscula.
+     *
+     * @param nombre El nombre completo del tutor.
+     * @return Las iniciales en mayúsculas (máximo dos caracteres).
+     */
+    private String obtenerIniciales(String nombre) {
+        String[] partes = nombre.trim().split("\\s+");
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < Math.min(2, partes.length); i++)
+            if (!partes[i].isEmpty())
+                sb.append(Character.toUpperCase(partes[i].charAt(0)));
+        return sb.toString();
     }
 }

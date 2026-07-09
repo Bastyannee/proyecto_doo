@@ -272,7 +272,7 @@ public class GestorDatos {
             "Roberto Esteban Díaz",
             "Ingeniero Civil con 6 años de experiencia impartiendo tutorías "
             + "de matemáticas para primeros años de carreras de ingeniería.",
-            "Cálculo I",
+            "Cálculo I y II",
             "Ciencias Exactas",
             "assets/fotos/roberto_diaz.png",
             horarioRoberto,
