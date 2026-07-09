@@ -116,7 +116,7 @@ public class PanelDetalleSoli extends JPanel {
             for (int b = 0; b < ConstantesHorario.BLOQUES; b++) {
                 celdas[d][b].setBackground(
                         horario[d][b] ? Tema.DISPONIBLE : Tema.NO_DISPONIBLE);
-                celdas[d][b].setText(horario[d][b] ? "✓" : "");
+                celdas[d][b].setText(horario[d][b] ? "Disponible" : "");
             }
         }
 

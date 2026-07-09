@@ -90,7 +90,7 @@ public class PanelConfirmacion extends JPanel {
         JPanel p = new JPanel(new BorderLayout());
         p.setBackground(Tema.ACENTO);
         p.setBorder(new EmptyBorder(Tema.PADDING, Tema.PADDING, Tema.PADDING, Tema.PADDING));
-        JLabel t = new JLabel("✓  Reserva confirmada exitosamente");
+        JLabel t = new JLabel("¡Reserva confirmada exitosamente!");
         t.setFont(Tema.FUENTE_TITULO);
         t.setForeground(Color.WHITE);
         p.add(t, BorderLayout.CENTER);

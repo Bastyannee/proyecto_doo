@@ -426,24 +426,37 @@ public class GestorDatos {
     }
 
     /**
-     * Registra una nueva reserva en el sistema previniendo conflictos horarios de tutores.
+     * Registra una nueva reserva en el sistema previniendo conflictos horarios de tutores
+     * y asegurando que el bloque agendado coincida con la disponibilidad declarada por el
+     * estudiante en su solicitud de origen.
      *
      * @param reserva Reserva a registrar.
      * @throws IllegalArgumentException  Si la reserva es nula.
-     * @throws ConflictoHorarioException Si la reserva colisiona con otra reserva activa del mismo tutor.
+     * @throws ConflictoHorarioException Si la reserva colisiona con otra reserva activa del mismo
+     * tutor, o si el día/bloque elegido no fue marcado por el estudiante como disponible en su solicitud de origen.
      */
     public void guardarReserva(Reserva reserva) {
         if (reserva == null)
             throw new IllegalArgumentException("La reserva a registrar no puede ser nula.");
 
+        // BLOQUE NUEVO — antes no existía esta validación
+        if (!reserva.getSolicitudOrigen().isBloqueSolicitado(reserva.getDiaIndex(), reserva.getBloqueIndex())) {
+            throw new ConflictoHorarioException(String.format(
+                    "Conflicto de horario: el estudiante '%s' no indicó disponibilidad "
+                            + "el %s en el bloque %s.",
+                    reserva.getEstudiante().getNombre(),
+                    reserva.getNombreDia(),
+                    reserva.getHora()));
+        }
+
         for (Reserva existente : reservas) {
             if (reserva.conflictaCon(existente)) {
                 throw new ConflictoHorarioException(String.format(
-                    "Conflicto de horario: el tutor '%s' ya tiene una clase activa "
-                    + "el %s en el bloque %s.",
-                    reserva.getTutor().getNombre(),
-                    reserva.getNombreDia(),
-                    reserva.getHora()));
+                        "Conflicto de horario: el tutor '%s' ya tiene una clase activa "
+                                + "el %s en el bloque %s.",
+                        reserva.getTutor().getNombre(),
+                        reserva.getNombreDia(),
+                        reserva.getHora()));
             }
         }
 

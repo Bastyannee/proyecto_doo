@@ -43,6 +43,8 @@ public final class Tema {
     public static final Color DISPONIBLE = new Color(144, 238, 144);
     /** Estado deshabilitado de agenda, indicando un bloque inactivo u ocupado. */
     public static final Color NO_DISPONIBLE = new Color(235, 235, 235);
+    /** Estado deshabilitado de agenda para un bloque libre del tutor que el alumno no marcó como disponible en su solicitud. */
+    public static final Color FUERA_DE_HORARIO_ALUMNO = new Color(255, 236, 179);
     /** Color de fondo para las celdas de cabecera en tablas de datos. */
     public static final Color ENCABEZADO_TABLA = new Color(30,  80,  160);
 

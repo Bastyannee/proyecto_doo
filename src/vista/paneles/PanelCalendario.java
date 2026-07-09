@@ -111,23 +111,33 @@ public class PanelCalendario extends JPanel implements Observador {
                 "$%.0f/hora  ·  Haz clic en un bloque disponible para seleccionarlo",
                 perfil.getTarifa()));
 
+        Solicitud solicitud = navegador.getSolicitudActiva();
+
         diaSeleccionado = -1;
         bloqueSeleccionado = -1;
         btnConfirmar.setEnabled(false);
 
         for (int d = 0; d < ConstantesHorario.DIAS; d++) {
             for (int b = 0; b < ConstantesHorario.BLOQUES; b++) {
-                boolean disponible = perfil.isDisponible(d, b);
+                boolean disponibleTutor = perfil.isDisponible(d, b);
+                /**
+                 * El bloque solo es agendable si, además de estar libre en la agenda del
+                 * tutor, el alumno lo marcó como disponible en su solicitud. De lo contrario
+                 * se estaría agendando una clase en un horario donde el alumno no coincide.
+                 */
+                boolean coincideConAlumno = solicitud == null || solicitud.isBloqueSolicitado(d, b);
+                boolean seleccionable = disponibleTutor && coincideConAlumno;
+
                 JLabel celda = celdas[d][b];
-                celda.setBackground(disponible ? Tema.DISPONIBLE : Tema.NO_DISPONIBLE);
 
                 for (var l : celda.getMouseListeners())
                     celda.removeMouseListener(l);
 
-                if (disponible) {
+                if (seleccionable) {
+                    celda.setBackground(Tema.DISPONIBLE);
                     celda.setForeground(Tema.TEXTO_PRIMARIO);
                     celda.setFont(Tema.FUENTE_CUERPO);
-                    celda.setText("✓");
+                    celda.setText("Disponible");
                     celda.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
                     final int fd = d, fb = b;
@@ -144,7 +154,16 @@ public class PanelCalendario extends JPanel implements Observador {
                                 celda.setBackground(Tema.DISPONIBLE);
                         }
                     });
+                } else if (disponibleTutor) {
+                    // El tutor está libre, pero el alumno no coincide en su horario: se
+                    // muestra distinguible del "Ocupado" y no queda habilitado para el clic.
+                    celda.setBackground(Tema.FUERA_DE_HORARIO_ALUMNO);
+                    celda.setForeground(new Color(150, 120, 40));
+                    celda.setFont(Tema.FUENTE_CUERPO.deriveFont(Font.BOLD));
+                    celda.setText("No coincide");
+                    celda.setCursor(Cursor.getDefaultCursor());
                 } else {
+                    celda.setBackground(Tema.NO_DISPONIBLE);
                     celda.setForeground(new Color(180, 185, 190));
                     celda.setFont(Tema.FUENTE_CUERPO.deriveFont(Font.BOLD));
                     celda.setText("Ocupado");
@@ -167,7 +186,7 @@ public class PanelCalendario extends JPanel implements Observador {
         if (diaSeleccionado >= 0) {
             celdas[diaSeleccionado][bloqueSeleccionado].setBackground(Tema.DISPONIBLE);
             celdas[diaSeleccionado][bloqueSeleccionado].setForeground(Tema.TEXTO_PRIMARIO);
-            celdas[diaSeleccionado][bloqueSeleccionado].setText("✓");
+            celdas[diaSeleccionado][bloqueSeleccionado].setText("Disponible");
         }
         diaSeleccionado = dia;
         bloqueSeleccionado = bloque;
