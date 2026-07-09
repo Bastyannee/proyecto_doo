@@ -164,11 +164,13 @@ public class GestorDatos {
     private void crearSolicitudesMock() {
     Estudiante pedro = estudiantes.get(0);
     Estudiante maria = estudiantes.get(1);
+    Estudiante juan = estudiantes.get(2);
+    Estudiante laura = estudiantes.get(3);
 
     boolean[][] horarioPedro = new boolean[ConstantesHorario.DIAS][ConstantesHorario.BLOQUES];
-    horarioPedro[0][0] = true; horarioPedro[0][1] = true; horarioPedro[0][2] = true; // Lunes
-    horarioPedro[2][0] = true; horarioPedro[2][1] = true; horarioPedro[2][2] = true; // Miércoles
-    horarioPedro[4][0] = true; horarioPedro[4][1] = true; horarioPedro[4][2] = true; // Viernes
+    horarioPedro[0][0] = true; horarioPedro[0][1] = true; horarioPedro[0][2] = true;
+    horarioPedro[2][0] = true; horarioPedro[2][1] = true; horarioPedro[2][2] = true;
+    horarioPedro[4][0] = true; horarioPedro[4][1] = true; horarioPedro[4][2] = true;
     
     registrarSolicitud(new Solicitud(
         "S-001", 
@@ -178,13 +180,42 @@ public class GestorDatos {
         pedro
     ));
 
+    boolean[][] horarioMaria = new boolean[ConstantesHorario.DIAS][ConstantesHorario.BLOQUES];
+    horarioMaria[1][3] = true; horarioMaria[1][4] = true;
+    horarioMaria[3][3] = true; horarioMaria[3][4] = true;
+
     registrarSolicitud(new Solicitud(
         "S-002", 
-        "Refuerzo de Química", 
-        "Necesito ayuda con la tabla periódica...", 
-        null, 
+        "Refuerzo de Estadística",
+        "Necesito ayuda con regresión lineal para mi seminario de título.",
+        horarioMaria,
         maria
     ));
+
+        boolean[][] horarioJuan = new boolean[ConstantesHorario.DIAS][ConstantesHorario.BLOQUES];
+        horarioJuan[0][2] = true; horarioJuan[0][3] = true;
+        horarioJuan[1][2] = true; horarioJuan[1][3] = true;
+
+        registrarSolicitud(new Solicitud(
+                "S-003",
+                "Álgebra Lineal y Sistemas de Ecuaciones",
+                "Requiero apoyo con matrices y transformaciones lineales.",
+                horarioJuan,
+                juan
+        ));
+
+        boolean[][] horarioLaura = new boolean[ConstantesHorario.DIAS][ConstantesHorario.BLOQUES];
+        horarioLaura[1][3] = true; horarioLaura[1][4] = true;
+        horarioLaura[2][3] = true; horarioLaura[2][4] = true;
+        horarioLaura[3][3] = true; horarioLaura[3][4] = true;
+
+        registrarSolicitud(new Solicitud(
+                "S-004",
+                "Inglés B2 - Redacción Jurídica",
+                "Quiero practicar redacción de informes jurídicos en inglés.",
+                horarioLaura,
+                laura
+        ));
 }
     /**
      * Crea y registra los 3 tutores de Mock Data, cada uno con una matriz de disponibilidad distinta.
